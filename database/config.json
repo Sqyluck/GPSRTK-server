@@ -1,0 +1,13 @@
+{
+  "mongoUri": "mongodb://192.168.1.10:27017",
+  "database": {
+    "gpsrtk": "gpsrtk"
+  },
+  "collections": {
+    "corrections": "corrections",
+    "base": "base",
+    "rover": "rover"
+  },
+  "correctionsRate": 1000,
+  "validity": 60000
+}
