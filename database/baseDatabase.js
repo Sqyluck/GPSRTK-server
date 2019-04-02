@@ -17,7 +17,7 @@ const addBaseToDatabase = async (latitude, longitude) => {
       var dist = distance(base.latitude, base.longitude, latitude, longitude)
       if (dist < 10) {
         baseId = base._id
-        await updateBasePosition(base.latitude, base.longitude, baseId)
+        await updateBasePosition(latitude, longitude, baseId)
         console.log(color.base, 'base found with distance: ' + dist + 'm' + ', base: ' + baseId)
       }
     })
@@ -76,11 +76,13 @@ const updateBaseStatus = async (id) => {
 
 const updateBasePosition = async (latitude, longitude, id) => {
   try {
+    console.log('[' + latitude + ', ' + longitude + ']')
     const db = await connectToDatabase(config.database.gpsrtk)
-    await db.collection(config.collections.base).findOneAndUpdate(
+    const result = await db.collection(config.collections.base).findOneAndUpdate(
       { _id: id },
       { $set: { latitude, longitude } }
     )
+    console.log(result)
   } catch (err) {
     console.log('updateBasePosition: ' + err)
   }
@@ -120,7 +122,7 @@ const getClosestBase = async (latitude, longitude) => {
 }
 
 const distance = (lat1, lon1, lat2, lon2) => {
-  var p = 0.017453292519943295
+  var p = 0.017453292519943295 // Math.PI / 180
   var c = Math.cos
   var a = 0.5 - c((lat2 - lat1) * p) / 2 +
           c(lat1 * p) * c(lat2 * p) *

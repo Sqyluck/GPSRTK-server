@@ -1,21 +1,50 @@
 const ipAddress = 'http://localhost:3000'
 const http = new XMLHttpRequest()
 
-var macarte
-const maxLength = 10
-const iSize = 50
-var roverMarkers = {}
+var map = null
+const iSize = 5
+const size = 15
+var markers = {}
+var base = null
+var allMarkers = []
+var truePosition = [50.632338576277775, 3.02044102992852]
+var mouseMarker = null
 
-var initMap = () => {
-  var latitude = 50.632238
-  var longitude = 3.020968
-  macarte = L.map('map').setView([latitude, longitude], 20)
-  L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
-    minZoom: 1,
-    maxZoom: 25
-  }).addTo(macarte)
+// Fonction d'initialisation de la carte
+const initMap = () => {
+  // [50.63227727189547, 3.0209262781542066]
+  var lat = 50.63227727189547
+  var lon = 3.0209262781542066
+  map = new google.maps.Map(document.getElementById('map'), {
+    center: new google.maps.LatLng(lat, lon),
+    zoom: 19,
+    maxZoom: 25,
+    mapTypeId: 'satellite',
+    tilt: 0,
+    heading: 360,
+    draggableCursor: 'crosshair',
+    gestureHandling: 'greedy'
+    // mapTypeControl: true,
+    // navigationControl: true,
+    // navigationControlOptions: {
+    //   style: google.maps.NavigationControlStyle.ZOOM_PAN
+    // }
+  })
+  map.addListener('click', (event) => {
+    addMarker(event.latLng)
+  })
 }
 
+
+const addMarker = (latlng) => {
+  if (mouseMarker) {
+    mouseMarker.setMap(null)
+    mouseMarker = null
+  }
+  let title = '[' + latlng.lat() + ', ' + latlng.lng() + ']'
+  console.log(title)
+  mouseMarker = new google.maps.Marker({ position: latlng, map: map, title: title })
+}
 
 const getBase = () => {
   http.open('GET', ipAddress + '/allBases', true)
@@ -23,58 +52,119 @@ const getBase = () => {
   http.onload = () => {
     if (http.status === 200) {
       let res = JSON.parse(http.response)
-      if ((http.response.latitude !== 0) && (http.response.longitude !== 0)) {
+      if ((res.latitude !== 0) && (res.longitude !== 0)) {
         initMap()
         showRoverItinerance()
-        L.marker([res.latitude, res.longitude], { icon: baseIcon }).addTo(macarte)
-        // followRoverPosition()
+        base = new google.maps.Marker({ position: { lat: res.latitude, lng: res.longitude }, map: map, icon: baseIcon, title: 'base : {' + res.latitude + ', ' + res.longitude + '}' })
       }
     }
   }
 }
 
 window.onload = () => {
-  console.log('start')
   getBase()
 }
 
-var roverIconVert = L.icon({
-  iconUrl: 'pointVert.png',
-  iconAnchor: [iSize / 2, iSize / 2],
-  iconSize: [iSize, iSize]
-})
+var roverIconVert = {
+  url: 'pointVert.png',
+  // origin:  new google.maps.Point(iSize / 2, iSize / 2),
+  anchor: new google.maps.Point(iSize / 2, iSize / 2),
+  scaledSize: new google.maps.Size(iSize, iSize)
+}
 
-var roverIconBleu = L.icon({
-  iconUrl: 'pointBleu.png',
-  iconAnchor: [iSize / 2, iSize / 2],
-  iconSize: [iSize, iSize]
-})
+var roverIconOrange = {
+  url: 'pointOrange.png',
+  // origin:  new google.maps.Point(iSize / 2, iSize / 2),
+  anchor: new google.maps.Point(iSize / 2, iSize / 2),
+  scaledSize: new google.maps.Size(iSize, iSize)
+}
 
-var roverIconRouge = L.icon({
-  iconUrl: 'pointRouge.png',
-  iconAnchor: [iSize / 2, iSize / 2],
-  iconSize: [iSize, iSize]
-  // shadowSize:   [50, 64], // size of the shadow
-  // shadowAnchor: [4, 62],  // the same for the shadow
-  // popupAnchor:  [-25, -76] // point from which the popup should open relative to the iconAnchor
-})
+var roverIconJaune = {
+  url: 'pointJaune.png',
+  // origin:  new google.maps.Point(iSize / 2, iSize / 2),
+  anchor: new google.maps.Point(iSize / 2, iSize / 2),
+  scaledSize: new google.maps.Size(iSize, iSize)
+}
 
-var baseIcon = L.icon({
-  iconUrl: 'pointBleu.png',
-  iconAnchor: [50, 50],
-  iconSize: [100, 100]
-})
+var roverIconBleu = {
+  url: 'pointBleu.png',
+  // origin:  new google.maps.Point(iSize / 2, iSize / 2),
+  anchor: new google.maps.Point(iSize / 2, iSize / 2),
+  scaledSize: new google.maps.Size(iSize, iSize)
+}
 
-var mainIconVert = L.icon({
-  iconUrl: 'pointVert.png',
-  iconAnchor: [50, 50],
-  iconSize: [100, 100]
-})
-var mainIconRouge = L.icon({
-  iconUrl: 'pointRouge.png',
-  iconAnchor: [50, 50],
-  iconSize: [100, 100]
-})
+var roverIconRouge = {
+  url: 'pointRouge.png',
+  // origin:  new google.maps.Point(iSize / 2, iSize / 2),
+  anchor: new google.maps.Point(iSize / 2, iSize / 2),
+  scaledSize: new google.maps.Size(iSize, iSize)
+}
+
+var baseIcon = {
+  url: 'base.png',
+  // origin:  new google.maps.Point(size / 2, size / 2),
+  anchor: new google.maps.Point(26 / 2, 26 / 2),
+  scaledSize: new google.maps.Size(26, 26)
+}
+
+var mainIconVert = {
+  url: 'cercleVert.png',
+  // origin:  new google.maps.Point(size / 2, size / 2),
+  anchor: new google.maps.Point(size / 2, size / 2),
+  scaledSize: new google.maps.Size(size, size)
+}
+var mainIconRouge = {
+  url: 'cercleRouge.png',
+  // origin:  new google.maps.Point(size / 2, size / 2),
+  anchor: new google.maps.Point(size / 2, size / 2),
+  scaledSize: new google.maps.Size(size, size)
+}
+
+var mainIconJaune = {
+  url: 'cercleJaune.png',
+  // origin:  new google.maps.Point(size / 2, size / 2),
+  anchor: new google.maps.Point(size / 2, size / 2),
+  scaledSize: new google.maps.Size(size, size)
+}
+
+var mainIconOrange = {
+  url: 'cercleOrange.png',
+  // origin:  new google.maps.Point(size / 2, size / 2),
+  anchor: new google.maps.Point(size / 2, size / 2),
+  scaledSize: new google.maps.Size(size, size)
+}
+
+const chooseIcon = (url) => {
+  switch (url) {
+    case 'cercleRouge.png':
+      return roverIconRouge
+    case 'cercleOrange.png':
+      return roverIconOrange
+    case 'cercleVert.png':
+      return roverIconVert
+    case 'cercleJaune.png':
+      return roverIconJaune
+    default:
+      return roverIconRouge
+  }
+}
+
+const chooseMainIcon = (status) => {
+  switch (status) {
+    case 'invalid':
+      return mainIconRouge
+    case '2D/3D':
+      return mainIconRouge
+    case 'DGNSS':
+      return mainIconOrange
+    case 'Fixed RTK':
+      return mainIconVert
+    case 'Float RTK':
+      return mainIconJaune
+    default:
+      return mainIconRouge
+  }
+}
 
 const showRoverItinerance = () => {
   http.open('GET', ipAddress + '/allRovers', true)
@@ -83,25 +173,17 @@ const showRoverItinerance = () => {
     if (http.status === 200) {
       let rovers = JSON.parse(http.response)
       rovers.forEach((rover) => {
-        if (roverMarkers[rover._id]) {
-          var LonLat = roverMarkers[rover._id]._latlng
-          macarte.removeLayer(roverMarkers[rover._id])
-          if (roverMarkers[rover._id].options.icon.options.iconUrl === 'pointRouge.png') {
-            L.marker(LonLat, { icon: roverIconRouge }).addTo(macarte)
-          } else {
-            L.marker(LonLat, { icon: roverIconVert }).addTo(macarte)
-          }
-          if (rover.status === 'DGNSS') {
-            roverMarkers[rover._id] = L.marker([rover.latitude, rover.longitude], { icon: mainIconVert }).addTo(macarte)
-          } else {
-            roverMarkers[rover._id] = L.marker([rover.latitude, rover.longitude], { icon: mainIconRouge }).addTo(macarte)
+        if (markers[rover._id]) {
+          var url = markers[rover._id].icon.url
+          var latlng = markers[rover._id].position
+          markers[rover._id].setMap(null)
+          markers[rover._id] = new google.maps.Marker({ position: { lat: rover.latitude, lng: rover.longitude }, map: map, icon: chooseMainIcon(rover.status), clickable: false })
+          allMarkers.push(new google.maps.Marker({ position: latlng, map: map, icon: chooseIcon(url), clickable: false }))
+          if (distance(rover.latitude, rover.longitude, latlng.lat, latlng.lng) < 1) {
+            console.log('distance: ' + distance(rover.latitude, rover.longitude, latlng.lat, latlng.lng))
           }
         } else {
-          if (rover.status === 'DGNSS') {
-            roverMarkers[rover._id] = L.marker([rover.latitude, rover.longitude], { icon: mainIconVert }).addTo(macarte)
-          } else {
-            roverMarkers[rover._id] = L.marker([rover.latitude, rover.longitude], { icon: mainIconRouge }).addTo(macarte)
-          }
+          markers[rover._id] = new google.maps.Marker({ position: { lat: rover.latitude, lng: rover.longitude }, map: map, icon: chooseMainIcon(rover.status), clickable: false })
         }
       })
       setTimeout(showRoverItinerance, 1000)
@@ -109,51 +191,11 @@ const showRoverItinerance = () => {
   }
 }
 
-const followRoverPosition = () => {
-  http.open('GET', ipAddress + '/allRovers', true)
-  http.send()
-  http.onload = () => {
-    if (http.status === 200) {
-      let rovers = JSON.parse(http.response)
-      rovers.forEach((rover) => {
-        if (roverMarkers[rover._id]) {
-          roverMarkers[rover._id].moveTo([rover.latitude, rover.longitude])
-        } else {
-          roverMarkers[rover._id] = L.marker([rover.latitude, rover.longitude], { icon: roverIconVert }).addTo(macarte)
-        }
-      })
-      setTimeout(followRoverPosition, 1000)
-    }
-  }
-}
-
-const showRoverPosition = () => {
-  http.open('GET', ipAddress + '/allRovers', true)
-  http.send()
-  http.onload = () => {
-    if (http.status === 200) {
-      let rovers = JSON.parse(http.response)
-      rovers.forEach((rover) => {
-        if (roverMarkers[rover._id]) {
-          if (roverMarkers[rover._id].length > maxLength) {
-            let killMarker = roverMarkers[rover._id].shift()
-            macarte.removeLayer(killMarker)
-          }
-          if (rover.status === 'DGNSS') {
-            roverMarkers[rover._id].push(L.marker([rover.latitude, rover.longitude], { icon: roverIconVert }).addTo(macarte))
-          } else {
-            roverMarkers[rover._id].push(L.marker([rover.latitude, rover.longitude], { icon: roverIconRouge }).addTo(macarte))
-          }
-        } else {
-          roverMarkers[rover._id] = []
-          if (rover.status === 'DGNSS') {
-            roverMarkers[rover._id].push(L.marker([rover.latitude, rover.longitude], { icon: roverIconVert }).addTo(macarte))
-          } else {
-            roverMarkers[rover._id].push(L.marker([rover.latitude, rover.longitude], { icon: roverIconRouge }).addTo(macarte))
-          }
-        }
-      })
-      setTimeout(showRoverPosition, 1000)
-    }
-  }
+const distance = (lat1, lon1, lat2, lon2) => {
+  var p = 0.017453292519943295 // Math.PI / 180
+  var c = Math.cos
+  var a = 0.5 - c((lat2 - lat1) * p) / 2 +
+          c(lat1 * p) * c(lat2 * p) *
+          (1 - c((lon2 - lon1) * p)) / 2
+  return 12742 * Math.asin(Math.sqrt(a))
 }

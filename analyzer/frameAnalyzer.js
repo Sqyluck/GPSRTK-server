@@ -19,6 +19,8 @@ const {
   getStringStatus
 } = require('./roverAnalyzer.js')
 
+const color = require('./../color.js')
+
 // const color = require('./../color.js')
 
 const { analyzeAndSaveData } = require('./baseAnalyzer.js')
@@ -64,6 +66,7 @@ const base = async (rest, data, id) => {
 
 const rover = async (data, baseId, roverId) => {
   const result = await analyzeAndGetData(data)
+  console.log(color.rover, '[ROVER] Status: ' + result.status)
   if (result.result) {
     await updateRoverPositionById(getLonLatInDec(result.latitude), getLonLatInDec(result.longitude), result.status, roverId)
     const rtcmPacket = await getFramesFromDatabase(baseId)
@@ -71,7 +74,7 @@ const rover = async (data, baseId, roverId) => {
       value: rtcmPacket
     }
   } else {
-    console.log('rover failed')
+    console.log('rover failed: ' + JSON.stringify(result))
     return false
   }
 }
@@ -88,7 +91,7 @@ const checkConnectionFrame = async (frame) => {
   const longitude = getLonLatInDec(positionData[4])
   const result = {
     status: connectionData[1],
-    connected: ((((connectionData[1] === 'BASE') || (connectionData[1] === 'ROVER')) && (status !== 0)) || connectionData[1] === 'ADMIN')
+    connected: (((connectionData[1] === 'BASE') || (connectionData[1] === 'ROVER')) && (Number(status) !== 0))
   }
   if (!result.connected) {
     return result

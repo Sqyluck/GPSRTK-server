@@ -1,11 +1,13 @@
 const analyzeAndGetData = async (data) => {
-  const check = data.toString().split('!')
-  const positionData = check[2].split(',')
+  // const check = data.toString().split('!')
+  // const positionData = check[2].split(',')
+  console.log(data.toString())
+  const positionData = data.toString().split(',')
   return {
     latitude: positionData[2],
     longitude: positionData[4],
     status: getStringStatus(positionData[6]),
-    result: (positionData[2] != null) && (positionData[4] != null) && (positionData[6] != null)
+    result: (positionData[2] !== '') && (positionData[4] !== '') && (positionData[2] != null) && (positionData[4] != null) && (positionData[6] != null)
   }
 }
 

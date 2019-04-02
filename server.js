@@ -26,6 +26,7 @@ const color = require('./color.js')
 /**
  * Start server
  */
+
 server.listen(6666, '192.168.1.106', () => {
   console.log('\x1b[33m', '----- ' + logDatetime() + ' ----- Server listening at ' + server.address().address + ':' + server.address().port)
 })
@@ -36,6 +37,7 @@ server.listen(6666, '192.168.1.106', () => {
 server.on('connection', async (socket) => {
   socket.setNoDelay(true)
   var client = {}
+  var counter = 0
   var stillAlive = null
 
   const startTimer = () => {
@@ -46,8 +48,9 @@ server.on('connection', async (socket) => {
       } else {
         console.log(color.base, '(!)[' + client.status + '] : Disconnected from server')
       }
-      // socket.end()
-    }, 60000)
+      console.log('socket.end()')
+      socket.end()
+    }, 30000)
   }
 
   const stopTimer = () => {
@@ -64,10 +67,10 @@ server.on('connection', async (socket) => {
       if (length !== buffer.length) {
         console.log('[ERROR] message incomplet')
       }
-      console.log(color.rover, '--> [' + array[index].type + ': length: ' + buffer.length + ']')
+      // console.log(color.rover, '--> [' + array[index].type + ': length: ' + buffer.length + ']')
       socket.write(buffer)
       index++
-      setTimeout(sendData, 0, array, index)
+      setTimeout(sendData, 30, array, index)
     } else {
       return true
     }
@@ -86,12 +89,13 @@ server.on('connection', async (socket) => {
       client.rest = result.rest
       console.log(color.base, '[' + client.status + '] : RTCM Received from base') // : [' + logDatetime() + ']
     } else if (Array.isArray(result.value)) {
-      console.log(color.rover, '[' + client.status + '] : RTCM Send to rover') // : [' + logDatetime() + ']
+      console.log(color.rover, '[' + client.status + '] : RTCM Send to rover [' + (counter++ % 100) + ']') // : [' + logDatetime() + ']
     }
     if (Array.isArray(result.value)) {
       if (result.value.length === 0) {
         socket.write(Buffer.from('!ndat'))
       } else {
+        console.log('--> SEND RTCM [' + result.value.length + ']')
         sendData(result.value, 0)
       }
     } else {
@@ -118,11 +122,11 @@ server.on('connection', async (socket) => {
 
   socket.on('close', () => {
     console.log('socket disconnected')
-    console.log('----- %s ----- Close connection from %s', logDatetime(), remoteAddress)
+    console.log('----- ' + logDatetime() + ' ----- Close connection from ' + remoteAddress + ' (on close)' + ' [' + client.status + ']')
   })
 
   socket.on('error', (err) => {
-    console.log('----- %s ----- Connection %s error: %s', logDatetime(), remoteAddress, err.message)
+    console.log('----- ' + logDatetime() + ' ----- Connection ' + remoteAddress + ' error: ' + err.message + ', (on error)' + ' [' + client.status + ']')
   })
 })
 
