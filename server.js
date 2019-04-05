@@ -20,7 +20,7 @@ const {
   getallBasesFromDatabase
 } = require('./database/baseDatabase.js')
 
-const server = net.createServer()
+const server = net.createServer({ allowHalfOpen: false })
 
 const color = require('./color.js')
 /**
@@ -70,7 +70,7 @@ server.on('connection', async (socket) => {
       // console.log(color.rover, '--> [' + array[index].type + ': length: ' + buffer.length + ']')
       socket.write(buffer)
       index++
-      setTimeout(sendData, 30, array, index)
+      setTimeout(sendData, 100, array, index)
     } else {
       return true
     }
@@ -79,6 +79,9 @@ server.on('connection', async (socket) => {
   socket.on('data', async (data) => {
     const result = await analyzeData(client, data)
     if (client.status) {
+      if (client.status === 'ROVER') {
+        console.log('gprs on_data: ' + data.toString().slice(0, 6) + ', ' + data.length)
+      }
       stopTimer()
       startTimer()
       if (client.received === false) {
@@ -89,9 +92,14 @@ server.on('connection', async (socket) => {
       client.rest = result.rest
       console.log(color.base, '[' + client.status + '] : RTCM Received from base') // : [' + logDatetime() + ']
     } else if (Array.isArray(result.value)) {
+      if (counter === 10) {
+        socket.write(Buffer.from('ERROR'))
+      }
       console.log(color.rover, '[' + client.status + '] : RTCM Send to rover [' + (counter++ % 100) + ']') // : [' + logDatetime() + ']
     }
     if (Array.isArray(result.value)) {
+      client.ndatCounter = result.ndatCounter
+      client.baseId = result.baseId
       if (result.value.length === 0) {
         socket.write(Buffer.from('!ndat'))
       } else {
@@ -104,6 +112,7 @@ server.on('connection', async (socket) => {
       if (result.socket) {
         Object.assign(client, result.socket)
         if (client.status === 'ROVER') {
+          client.ndatCounter = 0
           console.log(color.rover, '[' + client.status + '] : [' + logDatetime() + '] : Connected')
         } else {
           client.rest = Buffer.from('')
@@ -117,7 +126,7 @@ server.on('connection', async (socket) => {
   })
 
   socket.on('end', () => {
-    console.log('socket end')
+    console.log('--------- socket end -----------')
   })
 
   socket.on('close', () => {

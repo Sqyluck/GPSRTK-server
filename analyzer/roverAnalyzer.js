@@ -1,7 +1,4 @@
 const analyzeAndGetData = async (data) => {
-  // const check = data.toString().split('!')
-  // const positionData = check[2].split(',')
-  console.log(data.toString())
   const positionData = data.toString().split(',')
   return {
     latitude: positionData[2],

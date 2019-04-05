@@ -17,8 +17,8 @@ const initMap = () => {
   var lon = 3.0209262781542066
   map = new google.maps.Map(document.getElementById('map'), {
     center: new google.maps.LatLng(lat, lon),
-    zoom: 19,
-    maxZoom: 25,
+    zoom: 20,
+    maxZoom: 30,
     mapTypeId: 'satellite',
     tilt: 0,
     heading: 360,
