@@ -11,7 +11,8 @@ const {
 
 const {
   addRoverToDatabase,
-  updateRoverPositionById
+  updateRoverPositionById,
+  setRoverFixed
 } = require('./../database/roverDatabase.js')
 
 const {
@@ -33,7 +34,7 @@ const analyzeData = async (client, data) => {
 
   // if connected as a rover
   } else if (client.status === 'ROVER') {
-    const res = await rover(data, client.baseId, client.roverId, client.ndatCounter)
+    const res = await rover(data, client.baseId, client.roverId, client.nb_try)
     return res
 
   // if not connected
@@ -64,33 +65,27 @@ const base = async (rest, data, id) => {
   }
 }
 
-const rover = async (data, baseId, roverId, ndatCounter) => {
+const rover = async (data, baseId, roverId, nbTry) => {
   const result = await analyzeAndGetData(data)
-  console.log(color.rover, '[ROVER] Status: ' + result.status)
+  // console.log(color.rover, '[ROVER] Status: ' + result.status)
   if (result.result) {
-    if (ndatCounter > 10) {
-      var newBase = await getClosestBase(getLonLatInDec(result.latitude), getLonLatInDec(result.longitude))
-      if (newBase) {
-        baseId = newBase
-        ndatCounter = 0
+    if ((result.status === 'DGNSS') || (nbTry === 10)) {
+      await updateRoverPositionById(getLonLatInDec(result.latitude), getLonLatInDec(result.longitude), result.status, roverId, true)
+      nbTry += 11
+      return {
+        value: '!fix'
+      }
+    } else if (nbTry < 10) {
+      await updateRoverPositionById(getLonLatInDec(result.latitude), getLonLatInDec(result.longitude), result.status, roverId, false)
+      const rtcmPacket = await getFramesFromDatabase(baseId)
+      if (rtcmPacket.length === 0) {
+        return {
+          value: rtcmPacket
+        }
       } else {
-        ndatCounter = 10
-      }
-    }
-    await updateRoverPositionById(getLonLatInDec(result.latitude), getLonLatInDec(result.longitude), result.status, roverId)
-    const rtcmPacket = await getFramesFromDatabase(baseId)
-    console.log('length: ' + rtcmPacket.length)
-    if (rtcmPacket.length === 0) {
-      return {
-        value: rtcmPacket,
-        ndatCounter: ndatCounter + 1,
-        baseId: baseId
-      }
-    } else {
-      return {
-        value: rtcmPacket,
-        ndatCounter: 0,
-        baseId: baseId
+        return {
+          value: rtcmPacket
+        }
       }
     }
   } else {

@@ -50,7 +50,7 @@ server.on('connection', async (socket) => {
       }
       console.log('socket.end()')
       socket.end()
-    }, 30000)
+    }, 6000000)
   }
 
   const stopTimer = () => {
@@ -80,30 +80,26 @@ server.on('connection', async (socket) => {
     const result = await analyzeData(client, data)
     if (client.status) {
       if (client.status === 'ROVER') {
-        console.log('gprs on_data: ' + data.toString().slice(0, 6) + ', ' + data.length)
+        console.log(color.rover, '[ROVER] ============= ' + client.nb_try + ' =============')
       }
       stopTimer()
       startTimer()
-      if (client.received === false) {
-        client.received = true
-      }
     }
     if (result.value === '!got') {
       client.rest = result.rest
       console.log(color.base, '[' + client.status + '] : RTCM Received from base') // : [' + logDatetime() + ']
     } else if (Array.isArray(result.value)) {
-      if (counter === 10) {
-        socket.write(Buffer.from('ERROR'))
-      }
       console.log(color.rover, '[' + client.status + '] : RTCM Send to rover [' + (counter++ % 100) + ']') // : [' + logDatetime() + ']
+    } else if (result.value === '!fix') {
+      console.log(color.rover, '[' + client.status + ']: Fix point found')
     }
+
     if (Array.isArray(result.value)) {
-      client.ndatCounter = result.ndatCounter
-      client.baseId = result.baseId
       if (result.value.length === 0) {
         socket.write(Buffer.from('!ndat'))
       } else {
-        console.log('--> SEND RTCM [' + result.value.length + ']')
+        client.nb_try++
+        console.log(color.rover, '--> SEND RTCM [' + result.value.length + ']')
         sendData(result.value, 0)
       }
     } else {
@@ -112,12 +108,16 @@ server.on('connection', async (socket) => {
       if (result.socket) {
         Object.assign(client, result.socket)
         if (client.status === 'ROVER') {
-          client.ndatCounter = 0
+          client.nb_try = 0
           console.log(color.rover, '[' + client.status + '] : [' + logDatetime() + '] : Connected')
         } else {
           client.rest = Buffer.from('')
           console.log(color.base, '[' + client.status + '] : [' + logDatetime() + '] : Connected')
         }
+      } else if (result.value === '!fix') {
+        setTimeout(() => {
+          client.nb_try = 0
+        }, 1000)
       }
     }
   })
@@ -126,11 +126,13 @@ server.on('connection', async (socket) => {
   })
 
   socket.on('end', () => {
+    if (client.status === 'ROVER') {
+      deleteRoverById(client.roverId)
+    }
     console.log('--------- socket end -----------')
   })
 
   socket.on('close', () => {
-    console.log('socket disconnected')
     console.log('----- ' + logDatetime() + ' ----- Close connection from ' + remoteAddress + ' (on close)' + ' [' + client.status + ']')
   })
 
