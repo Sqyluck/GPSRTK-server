@@ -5,6 +5,8 @@ const {
   asyncForEach
 } = require('./database.js')
 
+const { deleteCorrectionsbyBaseId } = require('./correctionsDatabase.js')
+
 const color = require('./../color.js')
 
 const addBaseToDatabase = async (latitude, longitude) => {
@@ -62,15 +64,15 @@ const getBaseById = async (id) => {
   }
 }
 
-const updateBaseStatus = async (id) => {
+const updateBaseLastUpdate = async (id) => {
   try {
     const db = await connectToDatabase(config.database.gpsrtk)
-    await db.collection(config.collections.base).findOneAndUpdate(
+    const res = await db.collection(config.collections.base).findOneAndUpdate(
       { _id: id },
       { $set: { lastUpdate: Date.now() } }
     )
   } catch (err) {
-    console.log('updateBaseStatus: ' + err)
+    console.log('updateBaseLastUpdate: ' + err)
   }
 }
 
@@ -99,21 +101,41 @@ const deleteBaseFromDatabase = async (id) => {
   }
 }
 
+const isBaseValid = async (id) => {
+  try {
+    const db = await connectToDatabase(config.database.gpsrtk)
+    const result = await db.collection(config.collections.base).findOne({ _id: id, lastUpdate: { $gt: Date.now() - config.validity } })
+    return result != null
+  } catch (err) {
+    console.log('isbasevalid: ' + err)
+  }
+}
+
 const getClosestBase = async (latitude, longitude) => {
   try {
     const baseArray = await getallBasesFromDatabase()
     const min = {
-      dist: distance(baseArray[0].latitude, baseArray[0].longitude, latitude, longitude),
-      id: baseArray[0]._id
+      dist: -1,
+      id: null
     }
-    console.log(color.rover, 'i : [0], distance: ' + min.dist)
-    for (var i = 1; i < baseArray.length; i++) {
-      var dist = distance(baseArray[i].latitude, baseArray[i].longitude, latitude, longitude)
-      console.log(color.rover, 'i : [' + i + '], distance: ' + dist)
-      if (dist < min.dist) {
-        min.dist = dist
-        min.id = baseArray[i]._id
+    await asyncForEach(baseArray, async (base, i) => {
+      var dist = distance(base.latitude, base.longitude, latitude, longitude)
+      console.log(color.rover, 'i : [' + i + '], distance: ' + dist + ', base valid: ' + await isBaseValid(base._id))
+      if (await isBaseValid(base._id)) {
+        if ((dist < min.dist) || (min.dist === -1)) {
+          min.dist = dist
+          min.id = base._id
+        }
+      } else {
+        await deleteBaseFromDatabase(base._id)
+        await deleteCorrectionsbyBaseId(base._id)
       }
+    })
+
+    if (min.dist !== -1) {
+      console.log(color.rover, '[ROVER] Find closest base: ' + min.id + ' : ' + min.dist + 'm')
+    } else {
+      console.log(color.rover, '[ROVER] can\'t find any base: ' + min.id + ' : ' + min.dist + 'm')
     }
     return min.id
   } catch (err) {
@@ -135,4 +157,4 @@ exports.getallBasesFromDatabase = getallBasesFromDatabase
 exports.deleteBaseFromDatabase = deleteBaseFromDatabase
 exports.getClosestBase = getClosestBase
 exports.getBaseById = getBaseById
-exports.updateBaseStatus = updateBaseStatus
+exports.updateBaseLastUpdate = updateBaseLastUpdate
