@@ -214,34 +214,32 @@ const showPrecisePoint = () => {
   http.onload = () => {
     if (http.status === 200) {
       let rovers = JSON.parse(http.response)
-      rovers.forEach((rover) => {
-        console.log('fixed: ' + rover.fixed)
-        if (markers[rover._id]) {
+      rovers.forEach((rover, index) => {
+        if (markers[index]) {
           if (rover.fixed) {
-            if (markers[rover._id].fixed === false) {
-              markers[rover._id].fixed = true
-              if (markers[rover._id].marker) {
-                markers[rover._id].marker.setMap(null)
+            if (markers[index].fixed === false) {
+              markers[index].fixed = true
+              if (markers[index].marker) {
+                markers[index].marker.setMap(null)
               }
-              markers[rover._id].marker = new google.maps.Marker({
+              markers[index].marker = new google.maps.Marker({
                 title: 'position: {' + rover.latitude + ', ' + rover.longitude + '}',
                 position: { lat: rover.latitude, lng: rover.longitude },
                 icon: chooseMainIcon(rover.status),
-                // clickable: false,
                 map: map
               })
             }
           } else {
-            if (markers[rover._id].fixed === true) {
-              markers[rover._id].fixed = false
+            if (markers[index].fixed === true) {
+              markers[index].fixed = false
             }
-            if (markers[rover._id].marker) {
-              markers[rover._id].marker.setMap(null)
+            if (markers[index].marker) {
+              markers[index].marker.setMap(null)
             }
-            markers[rover._id].marker = new google.maps.Marker({ position: { lat: rover.latitude, lng: rover.longitude }, map: map, icon: chooseRoverIcon(rover.status), clickable: false })
+            markers[index].marker = new google.maps.Marker({ position: { lat: rover.latitude, lng: rover.longitude }, map: map, icon: chooseRoverIcon(rover.status), clickable: false })
           }
         } else {
-          markers[rover._id] = { marker: null, fixed: false }
+          markers[index] = { marker: null, fixed: false }
         }
       })
       setTimeout(showPrecisePoint, 1000)

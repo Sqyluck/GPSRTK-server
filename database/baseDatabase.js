@@ -78,13 +78,12 @@ const updateBaseLastUpdate = async (id) => {
 
 const updateBasePosition = async (latitude, longitude, id) => {
   try {
-    console.log('[' + latitude + ', ' + longitude + ']')
     const db = await connectToDatabase(config.database.gpsrtk)
     const result = await db.collection(config.collections.base).findOneAndUpdate(
       { _id: id },
       { $set: { latitude, longitude } }
     )
-    console.log(result)
+    // console.log(result)
   } catch (err) {
     console.log('updateBasePosition: ' + err)
   }

@@ -52,6 +52,18 @@ const getallRoversFromDatabase = async () => {
   }
 }
 
+const getRoverFromDatabase = async (roverId) => {
+  try {
+    const db = await connectToDatabase(config.database.gpsrtk)
+    const result = await db.collection(config.collections.rover).findOne(
+      { _id: roverId }
+    )
+    return result
+  } catch (err) {
+    console.log('getallRoversFromDatabase: ' + err)
+  }
+}
+
 const deleteRoverById = async (roverId) => {
   try {
     const db = await connectToDatabase(config.database.gpsrtk)
@@ -81,3 +93,4 @@ exports.deleteRoverById = deleteRoverById
 exports.deleteAllRovers = deleteAllRovers
 exports.getallRoversFromDatabase = getallRoversFromDatabase
 exports.setRoverFixed = setRoverFixed
+exports.getRoverFromDatabase = getRoverFromDatabase
