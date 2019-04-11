@@ -68,6 +68,11 @@ const createBase = async () => {
 
 main()
 
+
+
+
+
+
 /*
 const fougeres = { latitude: 47.461371, longitude: 1.339696 }
 const home = { latitude: 50.633437, longitude: 3.042425 }

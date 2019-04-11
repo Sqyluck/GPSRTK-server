@@ -11,7 +11,8 @@ const {
 
 const {
   addRoverToDatabase,
-  updateRoverPositionById
+  updateRoverPositionById,
+  getRoverFromDatabase
 } = require('./../database/roverDatabase.js')
 
 const {
@@ -33,7 +34,7 @@ const analyzeData = async (client, data) => {
 
   // if connected as a rover
   } else if (client.status === 'ROVER') {
-    const res = await rover(data, client.baseId, client.roverId, client.ndatCounter)
+    const res = await rover(data, client.baseId, client.roverId, client.nb_try)
     return res
 
   // if not connected
@@ -54,7 +55,8 @@ const analyzeData = async (client, data) => {
 
 const base = async (rest, data, id) => {
   const res = await analyzeAndSaveData(rest, data, id)
-  if (res.result) {
+  console.log(color.base, '<-- [' + res.result + '] Rtcm Received')
+  if (res.result !== 0) {
     return {
       value: '!got',
       rest: res.rest
@@ -64,39 +66,40 @@ const base = async (rest, data, id) => {
   }
 }
 
-const rover = async (data, baseId, roverId, ndatCounter) => {
+const rover = async (data, baseId, roverId, nbTry) => {
   const result = await analyzeAndGetData(data)
-  console.log(color.rover, '[ROVER] Status: ' + result.status)
+  // console.log(color.rover, '[ROVER] Status: ' + result.status)
+  let threshold = 20
   if (result.result) {
-    if (ndatCounter > 10) {
-      var newBase = await getClosestBase(getLonLatInDec(result.latitude), getLonLatInDec(result.longitude))
-      if (newBase) {
-        baseId = newBase
-        ndatCounter = 0
-      } else {
-        ndatCounter = 10
-      }
-    }
-    await updateRoverPositionById(getLonLatInDec(result.latitude), getLonLatInDec(result.longitude), result.status, roverId)
-    const rtcmPacket = await getFramesFromDatabase(baseId)
-    console.log('length: ' + rtcmPacket.length)
-    if (rtcmPacket.length === 0) {
+    if ((result.status === 'Fixed RTK') || (nbTry === threshold)) {
+      await updateRoverPositionById(getLonLatInDec(result.latitude), getLonLatInDec(result.longitude), result.status, roverId, true)
+      console.log(color.rover, '[ROVER]: Fix point found: ' + '{' + result.status + '}')
       return {
-        value: rtcmPacket,
-        ndatCounter: ndatCounter + 1,
-        baseId: baseId
+        value: '!fix',
+        nb_try: threshold + 1
+      }
+    } else if (nbTry < threshold) {
+      await updateRoverPositionById(getLonLatInDec(result.latitude), getLonLatInDec(result.longitude), result.status, roverId, false)
+      const rtcmPacket = await getFramesFromDatabase(baseId)
+      console.log(color.rover, '[ROVER]: RTCM send, status: {' + result.status + '}')
+      if (rtcmPacket.length === 0) {
+        return {
+          value: rtcmPacket,
+          nb_try: nbTry
+        }
+      } else {
+        return {
+          value: rtcmPacket,
+          nb_try: ++nbTry
+        }
       }
     } else {
-      return {
-        value: rtcmPacket,
-        ndatCounter: 0,
-        baseId: baseId
-      }
+      console.log(color.rover, 'rover +1: ' + nbTry)
     }
   } else {
-    console.log('rover failed: ' + JSON.stringify(result))
+    console.log(color.rover, 'rover failed: ' + JSON.stringify(result))
     return {
-      value: '!ndat'
+      value: []
     }
   }
 }
@@ -106,24 +109,28 @@ const getLonLatInDec = (value) => {
 }
 
 const checkConnectionFrame = async (frame) => {
-  const connectionData = frame.toString().split('!')
-  const positionData = connectionData[2].split(',')
-  const status = positionData[6]
-  const latitude = getLonLatInDec(positionData[2])
-  const longitude = getLonLatInDec(positionData[4])
-  const result = {
-    status: connectionData[1],
-    connected: (((connectionData[1] === 'BASE') || (connectionData[1] === 'ROVER')) && (Number(status) !== 0))
-  }
-  if (!result.connected) {
-    return result
-  } else if (connectionData[1] === 'BASE') {
-    result.baseId = await addBaseToDatabase(latitude, longitude)
-    return result
-  } else if (connectionData[1] === 'ROVER') {
-    result.baseId = await getClosestBase(latitude, longitude)
-    result.roverId = await addRoverToDatabase(latitude, longitude, getStringStatus(status))
-    return result
+  if (frame != null) {
+    const connectionData = frame.toString().split('!')
+    const positionData = connectionData[2].split(',')
+    const status = positionData[6]
+    const latitude = getLonLatInDec(positionData[2])
+    const longitude = getLonLatInDec(positionData[4])
+    const result = {
+      status: connectionData[1],
+      connected: (((connectionData[1] === 'BASE') || (connectionData[1] === 'ROVER')) && (Number(status) !== 0))
+    }
+    if (!result.connected) {
+      return result
+    } else if (connectionData[1] === 'BASE') {
+      result.baseId = await addBaseToDatabase(latitude, longitude)
+      return result
+    } else if (connectionData[1] === 'ROVER') {
+      result.baseId = await getClosestBase(latitude, longitude)
+      if (result.baseId) {
+        result.roverId = await addRoverToDatabase(latitude, longitude, getStringStatus(status))
+      }
+      return result
+    }
   }
 }
 
@@ -136,8 +143,19 @@ const deleteBase = async (id) => {
   await deleteBaseFromDatabase(id)
 }
 
+const changeBase = async (roverId) => {
+  try {
+    var rover = await getRoverFromDatabase(roverId)
+    var baseId = await getClosestBase(rover.latitude, rover.longitude)
+    return baseId
+  } catch (err) {
+    console.log('changeBase: ' + err)
+  }
+}
+
 exports.analyzeAndSaveData = analyzeAndSaveData
 exports.checkConnectionFrame = checkConnectionFrame
 exports.logDatetime = logDatetime
 exports.deleteBase = deleteBase
 exports.analyzeData = analyzeData
+exports.changeBase = changeBase

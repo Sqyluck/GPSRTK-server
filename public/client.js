@@ -2,7 +2,7 @@ const ipAddress = 'http://localhost:3000'
 const http = new XMLHttpRequest()
 
 var map = null
-const iSize = 5
+const iSize = 10
 const size = 15
 var markers = {}
 var base = null
@@ -42,7 +42,7 @@ const addMarker = (latlng) => {
     mouseMarker = null
   }
   let title = '[' + latlng.lat() + ', ' + latlng.lng() + ']'
-  console.log(title)
+  // console.log(title)
   mouseMarker = new google.maps.Marker({ position: latlng, map: map, title: title })
 }
 
@@ -54,7 +54,7 @@ const getBase = () => {
       let res = JSON.parse(http.response)
       if ((res.latitude !== 0) && (res.longitude !== 0)) {
         initMap()
-        showRoverItinerance()
+        showPrecisePoint()
         base = new google.maps.Marker({ position: { lat: res.latitude, lng: res.longitude }, map: map, icon: baseIcon, title: 'base : {' + res.latitude + ', ' + res.longitude + '}' })
       }
     }
@@ -149,6 +149,23 @@ const chooseIcon = (url) => {
   }
 }
 
+const chooseRoverIcon = (status) => {
+  switch (status) {
+    case 'invalid':
+      return roverIconRouge
+    case '2D/3D':
+      return roverIconRouge
+    case 'DGNSS':
+      return roverIconOrange
+    case 'Fixed RTK':
+      return roverIconVert
+    case 'Float RTK':
+      return roverIconJaune
+    default:
+      return roverIconRouge
+  }
+}
+
 const chooseMainIcon = (status) => {
   switch (status) {
     case 'invalid':
@@ -183,10 +200,65 @@ const showRoverItinerance = () => {
             console.log('distance: ' + distance(rover.latitude, rover.longitude, latlng.lat, latlng.lng))
           }
         } else {
-          markers[rover._id] = new google.maps.Marker({ position: { lat: rover.latitude, lng: rover.longitude }, map: map, icon: chooseMainIcon(rover.status), clickable: false })
+          markers[rover._id] = new google.maps.Marker({ position: { lat: rover.latitude, lng: rover.longitude }, map: map, icon: chooseRoverIcon(rover.status), clickable: false })
         }
       })
       setTimeout(showRoverItinerance, 1000)
+    }
+  }
+}
+
+const showRover = () => {
+  if (markers[0]) {
+    map.setCenter(markers[0].marker.position)
+  } else {
+    console.log('no rover')
+  }
+}
+
+const showBase = () => {
+  if (base) {
+    map.setCenter(base.position)
+  } else {
+    console.log('no base')
+  }
+}
+
+const showPrecisePoint = () => {
+  http.open('GET', ipAddress + '/allRovers', true)
+  http.send()
+  http.onload = () => {
+    if (http.status === 200) {
+      let rovers = JSON.parse(http.response)
+      rovers.forEach((rover, index) => {
+        if (markers[index]) {
+          if (rover.fixed) {
+            if (markers[index].fixed === false) {
+              markers[index].fixed = true
+              if (markers[index].marker) {
+                markers[index].marker.setMap(null)
+              }
+              markers[index].marker = new google.maps.Marker({
+                title: 'position: {' + rover.latitude + ', ' + rover.longitude + '}',
+                position: { lat: rover.latitude, lng: rover.longitude },
+                icon: chooseMainIcon(rover.status),
+                map: map
+              })
+            }
+          } else {
+            if (markers[index].fixed === true) {
+              markers[index].fixed = false
+            }
+            if (markers[index].marker) {
+              markers[index].marker.setMap(null)
+            }
+            markers[index].marker = new google.maps.Marker({ position: { lat: rover.latitude, lng: rover.longitude }, map: map, icon: chooseRoverIcon(rover.status), clickable: false })
+          }
+        } else {
+          markers[index] = { marker: null, fixed: false }
+        }
+      })
+      setTimeout(showPrecisePoint, 1000)
     }
   }
 }

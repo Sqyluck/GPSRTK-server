@@ -7,7 +7,8 @@ const app = express()
 // respond with 'hello world' when a GET request is made to the homepage
 const {
   logDatetime,
-  analyzeData
+  analyzeData,
+  changeBase
 } = require('./analyzer/frameAnalyzer.js')
 
 const {
@@ -36,11 +37,13 @@ server.listen(6666, '192.168.1.106', () => {
  */
 server.on('connection', async (socket) => {
   socket.setNoDelay(true)
-  var client = {}
-  var counter = 0
+  var client = {
+    connFailed: 0,
+    ndat: 0
+  }
   var stillAlive = null
 
-  const startTimer = () => {
+  const startTimer = (time) => {
     stillAlive = setTimeout(() => {
       if (client.status === 'ROVER') {
         console.log(color.rover, '(!)[' + client.status + '] : Disconnected from server')
@@ -48,9 +51,9 @@ server.on('connection', async (socket) => {
       } else {
         console.log(color.base, '(!)[' + client.status + '] : Disconnected from server')
       }
-      console.log('socket.end()')
+      client = {}
       socket.end()
-    }, 30000)
+    }, time)
   }
 
   const stopTimer = () => {
@@ -78,46 +81,83 @@ server.on('connection', async (socket) => {
 
   socket.on('data', async (data) => {
     const result = await analyzeData(client, data)
-    if (client.status) {
-      if (client.status === 'ROVER') {
-        console.log('gprs on_data: ' + data.toString().slice(0, 6) + ', ' + data.length)
+
+    if (result) {
+      if (result.nb_try) {
+        client.nb_try = result.nb_try
       }
-      stopTimer()
-      startTimer()
-      if (client.received === false) {
-        client.received = true
+
+      // Keep alive
+      if (client.status) {
+        stopTimer()
+        startTimer(30000)
       }
-    }
-    if (result.value === '!got') {
-      client.rest = result.rest
-      console.log(color.base, '[' + client.status + '] : RTCM Received from base') // : [' + logDatetime() + ']
-    } else if (Array.isArray(result.value)) {
-      if (counter === 10) {
-        socket.write(Buffer.from('ERROR'))
-      }
-      console.log(color.rover, '[' + client.status + '] : RTCM Send to rover [' + (counter++ % 100) + ']') // : [' + logDatetime() + ']
-    }
-    if (Array.isArray(result.value)) {
-      client.ndatCounter = result.ndatCounter
-      client.baseId = result.baseId
-      if (result.value.length === 0) {
-        socket.write(Buffer.from('!ndat'))
+
+      // Send responses to clients
+      if (Array.isArray(result.value)) {
+        if (result.value.length === 0) {
+          socket.write(Buffer.from('!ndat'))
+        } else {
+          console.log(color.rover, '--> [' + result.value.length + '] Rtcm Send')
+          sendData(result.value, 0)
+        }
       } else {
-        console.log('--> SEND RTCM [' + result.value.length + ']')
-        sendData(result.value, 0)
+        if (result.value === '!fix') {
+          console.log('send fixed')
+        }
+        const buffer = Buffer.from(result.value)
+        socket.write(buffer)
       }
-    } else {
-      const buffer = Buffer.from(result.value)
-      socket.write(buffer)
+      // MSanage server side responses
       if (result.socket) {
         Object.assign(client, result.socket)
+        client.connFailed = 0
         if (client.status === 'ROVER') {
-          client.ndatCounter = 0
+          client.nb_try = 0
           console.log(color.rover, '[' + client.status + '] : [' + logDatetime() + '] : Connected')
         } else {
           client.rest = Buffer.from('')
           console.log(color.base, '[' + client.status + '] : [' + logDatetime() + '] : Connected')
         }
+      } else if (result.value === '!fix') {
+        stopTimer()
+        startTimer(600000)
+        setTimeout(() => {
+          client.nb_try = 0
+        }, 10000)
+
+        // connexion refused
+      } else if (result.value === '!nok') {
+        client.connFailed++
+        if (client.connFailed > 10) {
+          console.log('connexion refused')
+          socket.end()
+        }
+        // data received by base
+      } else if (result.value === '!got') {
+        client.rest = result.rest
+        console.log(color.base, '[' + client.status + '] : RTCM Received from base') // : [' + logDatetime() + ']
+
+        // data send to rover
+      } else if (Array.isArray(result.value)) {
+        if (result.value.length === 0) {
+          client.ndat++
+          console.log('no data: ' + client.ndat)
+          if (client.ndat > 10) {
+            client.baseId = await changeBase(client.roverId)
+            if (client.baseId) {
+              client.ndat = 0
+              console.log('base changed: ' + client.baseId)
+            } else {
+              socket.end()
+            }
+          }
+        } else {
+          if (client.ndat !== 0) {
+            client.ndat = 0
+          }
+        }
+        // console.log(color.rover, '[' + client.status + '] : RTCM Send to rover') // : [' + logDatetime() + ']
       }
     }
   })
@@ -126,16 +166,20 @@ server.on('connection', async (socket) => {
   })
 
   socket.on('end', () => {
-    console.log('--------- socket end -----------')
+    if (client.status === 'ROVER') {
+      deleteRoverById(client.roverId)
+    }
+    console.log(client.status === 'ROVER' ? color.rover : color.base, '--------- socket end -----------')
   })
 
   socket.on('close', () => {
-    console.log('socket disconnected')
-    console.log('----- ' + logDatetime() + ' ----- Close connection from ' + remoteAddress + ' (on close)' + ' [' + client.status + ']')
+    console.log(client.status === 'ROVER' ? color.rover : color.base, '----- ' + logDatetime() + ' ----- Close connection from ' + remoteAddress)
+    client = {}
+    stopTimer()
   })
 
   socket.on('error', (err) => {
-    console.log('----- ' + logDatetime() + ' ----- Connection ' + remoteAddress + ' error: ' + err.message + ', (on error)' + ' [' + client.status + ']')
+    console.log(client.status === 'ROVER' ? color.rover : color.base, '----- ' + logDatetime() + ' ----- Connection ' + remoteAddress + ' error: ' + err.message + ', (on error)' + ' [' + client.status + ']')
   })
 })
 
