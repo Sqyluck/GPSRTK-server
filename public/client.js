@@ -42,7 +42,7 @@ const addMarker = (latlng) => {
     mouseMarker = null
   }
   let title = '[' + latlng.lat() + ', ' + latlng.lng() + ']'
-  console.log(title)
+  // console.log(title)
   mouseMarker = new google.maps.Marker({ position: latlng, map: map, title: title })
 }
 
@@ -205,6 +205,22 @@ const showRoverItinerance = () => {
       })
       setTimeout(showRoverItinerance, 1000)
     }
+  }
+}
+
+const showRover = () => {
+  if (markers[0]) {
+    map.setCenter(markers[0].marker.position)
+  } else {
+    console.log('no rover')
+  }
+}
+
+const showBase = () => {
+  if (base) {
+    map.setCenter(base.position)
+  } else {
+    console.log('no base')
   }
 }
 

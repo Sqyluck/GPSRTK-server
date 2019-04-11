@@ -43,7 +43,7 @@ server.on('connection', async (socket) => {
   }
   var stillAlive = null
 
-  const startTimer = () => {
+  const startTimer = (time) => {
     stillAlive = setTimeout(() => {
       if (client.status === 'ROVER') {
         console.log(color.rover, '(!)[' + client.status + '] : Disconnected from server')
@@ -53,7 +53,7 @@ server.on('connection', async (socket) => {
       }
       client = {}
       socket.end()
-    }, 300000)
+    }, time)
   }
 
   const stopTimer = () => {
@@ -90,7 +90,7 @@ server.on('connection', async (socket) => {
       // Keep alive
       if (client.status) {
         stopTimer()
-        startTimer()
+        startTimer(30000)
       }
 
       // Send responses to clients
@@ -102,6 +102,9 @@ server.on('connection', async (socket) => {
           sendData(result.value, 0)
         }
       } else {
+        if (result.value === '!fix') {
+          console.log('send fixed')
+        }
         const buffer = Buffer.from(result.value)
         socket.write(buffer)
       }
@@ -117,6 +120,8 @@ server.on('connection', async (socket) => {
           console.log(color.base, '[' + client.status + '] : [' + logDatetime() + '] : Connected')
         }
       } else if (result.value === '!fix') {
+        stopTimer()
+        startTimer(600000)
         setTimeout(() => {
           client.nb_try = 0
         }, 10000)
@@ -169,6 +174,8 @@ server.on('connection', async (socket) => {
 
   socket.on('close', () => {
     console.log(client.status === 'ROVER' ? color.rover : color.base, '----- ' + logDatetime() + ' ----- Close connection from ' + remoteAddress)
+    client = {}
+    stopTimer()
   })
 
   socket.on('error', (err) => {
