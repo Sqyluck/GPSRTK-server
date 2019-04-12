@@ -55,11 +55,17 @@ const analyzeData = async (client, data) => {
 
 const base = async (rest, data, id) => {
   const res = await analyzeAndSaveData(rest, data, id)
-  console.log(color.base, '<-- [' + res.result + '] Rtcm Received')
   if (res.result !== 0) {
-    return {
-      value: '!got',
-      rest: res.rest
+    if (res.result === -1) {
+      return {
+        value: '!got'
+      }
+    } else {
+      console.log(color.base, '<-- [' + res.result + '] Rtcm Received')
+      return {
+        value: '!got',
+        rest: res.rest
+      }
     }
   } else {
     return false
@@ -159,3 +165,4 @@ exports.logDatetime = logDatetime
 exports.deleteBase = deleteBase
 exports.analyzeData = analyzeData
 exports.changeBase = changeBase
+exports.getLonLatInDec = getLonLatInDec

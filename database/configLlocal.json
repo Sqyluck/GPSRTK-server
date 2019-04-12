@@ -1,5 +1,5 @@
 {
-  "mongoUri": "mongodb://rtkUser:QsqtjLor5Xrp@krcq1j.stackhero-network.com:27017/rtk?ssl=true",
+  "mongoUri": "mongodb://192.168.1.10:27017",
   "database": {
     "gpsrtk": "rtk"
   },

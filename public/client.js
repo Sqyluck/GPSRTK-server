@@ -9,6 +9,8 @@ var base = null
 var allMarkers = []
 var truePosition = [50.632338576277775, 3.02044102992852]
 var mouseMarker = null
+var followRover = false
+var followBase = false
 
 // Fonction d'initialisation de la carte
 const initMap = () => {
@@ -42,7 +44,7 @@ const addMarker = (latlng) => {
     mouseMarker = null
   }
   let title = '[' + latlng.lat() + ', ' + latlng.lng() + ']'
-  // console.log(title)
+  console.log(title)
   mouseMarker = new google.maps.Marker({ position: latlng, map: map, title: title })
 }
 
@@ -211,6 +213,7 @@ const showRoverItinerance = () => {
 const showRover = () => {
   if (markers[0]) {
     map.setCenter(markers[0].marker.position)
+    followRover = false
   } else {
     console.log('no rover')
   }
@@ -219,8 +222,39 @@ const showRover = () => {
 const showBase = () => {
   if (base) {
     map.setCenter(base.position)
+    followRover = false
   } else {
     console.log('no base')
+  }
+}
+
+const followRoverFnct = () => {
+  followRover = true
+}
+
+const followBaseFnct = () => {
+  followBase = !followBase
+  var to = null
+  if (followBase) {
+    to = setTimeout(followBaseFnct2, 1000)
+  } else {
+    clearTimeout(to)
+  }
+}
+
+const followBaseFnct2 = () => {
+  if (base) {
+    http.open('GET', ipAddress + '/allBases', true)
+    http.send()
+    http.onload = () => {
+      let bases = JSON.parse(http.response)
+      if (base) {
+        let baseLatLng = new google.maps.LatLng(bases.latitude, bases.longitude)
+        console.log(baseLatLng)
+        base.setPosition(baseLatLng)
+      }
+      setTimeout(followBaseFnct2, 1000)
+    }
   }
 }
 
@@ -231,6 +265,13 @@ const showPrecisePoint = () => {
     if (http.status === 200) {
       let rovers = JSON.parse(http.response)
       rovers.forEach((rover, index) => {
+        if (followRover) {
+          if (markers[0]) {
+            map.setCenter(markers[0].marker.position)
+          } else {
+            console.log('no rover')
+          }
+        }
         if (markers[index]) {
           if (rover.fixed) {
             if (markers[index].fixed === false) {
@@ -241,16 +282,16 @@ const showPrecisePoint = () => {
               markers[index].marker = new google.maps.Marker({
                 title: 'position: {' + rover.latitude + ', ' + rover.longitude + '}',
                 position: { lat: rover.latitude, lng: rover.longitude },
-                icon: chooseMainIcon(rover.status),
+                icon: chooseRoverIcon(rover.status),
                 map: map
               })
             }
           } else {
+            if ((markers[index].marker) && (markers[index].fixed === false)) {
+              markers[index].marker.setMap(null)
+            }
             if (markers[index].fixed === true) {
               markers[index].fixed = false
-            }
-            if (markers[index].marker) {
-              markers[index].marker.setMap(null)
             }
             markers[index].marker = new google.maps.Marker({ position: { lat: rover.latitude, lng: rover.longitude }, map: map, icon: chooseRoverIcon(rover.status), clickable: false })
           }

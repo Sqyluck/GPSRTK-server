@@ -2,7 +2,8 @@ const config = require('./config.json')
 
 const {
   connectToDatabase,
-  asyncForEach
+  asyncForEach,
+  ObjectId
 } = require('./database.js')
 
 const { deleteCorrectionsbyBaseId } = require('./correctionsDatabase.js')
@@ -11,7 +12,7 @@ const color = require('./../color.js')
 
 const addBaseToDatabase = async (latitude, longitude) => {
   try {
-    const db = await connectToDatabase(config.database.gpsrtk)
+    const db = await connectToDatabase()
     const baseArray = await getallBasesFromDatabase()
     var baseId = null
     await asyncForEach(baseArray, async (base) => {
@@ -32,7 +33,8 @@ const addBaseToDatabase = async (latitude, longitude) => {
           latitude,
           longitude,
           date: Date.now(),
-          lastUpdate: Date.now()
+          lastUpdate: Date.now(),
+          meanAcc: 0
         }
       )
       return result.ops[0]._id
@@ -44,7 +46,7 @@ const addBaseToDatabase = async (latitude, longitude) => {
 
 const getallBasesFromDatabase = async () => {
   try {
-    const db = await connectToDatabase(config.database.gpsrtk)
+    const db = await connectToDatabase()
     const result = await db.collection(config.collections.base).find()
     return result.toArray()
   } catch (err) {
@@ -54,7 +56,7 @@ const getallBasesFromDatabase = async () => {
 
 const getBaseById = async (id) => {
   try {
-    const db = await connectToDatabase(config.database.gpsrtk)
+    const db = await connectToDatabase()
     const result = await db.collection(config.collections.base).findOne(
       { _id: id }
     )
@@ -66,8 +68,8 @@ const getBaseById = async (id) => {
 
 const updateBaseLastUpdate = async (id) => {
   try {
-    const db = await connectToDatabase(config.database.gpsrtk)
-    const res = await db.collection(config.collections.base).findOneAndUpdate(
+    const db = await connectToDatabase()
+    const result = await db.collection(config.collections.base).findOneAndUpdate(
       { _id: id },
       { $set: { lastUpdate: Date.now() } }
     )
@@ -76,11 +78,23 @@ const updateBaseLastUpdate = async (id) => {
   }
 }
 
-const updateBasePosition = async (latitude, longitude, id) => {
+const updateBaseMeanAcc = async (id, meanAcc) => {
   try {
-    const db = await connectToDatabase(config.database.gpsrtk)
+    const db = await connectToDatabase()
     const result = await db.collection(config.collections.base).findOneAndUpdate(
       { _id: id },
+      { $set: { meanAcc } }
+    )
+  } catch (err) {
+    console.log('updateBaseMeanAcc: ' + err)
+  }
+}
+
+const updateBasePosition = async (latitude, longitude, id) => {
+  try {
+    const db = await connectToDatabase()
+    const result = await db.collection(config.collections.base).findOneAndUpdate(
+      { _id: ObjectId(id) },
       { $set: { latitude, longitude } }
     )
     // console.log(result)
@@ -91,7 +105,7 @@ const updateBasePosition = async (latitude, longitude, id) => {
 
 const deleteBaseFromDatabase = async (id) => {
   try {
-    const db = await connectToDatabase(config.database.gpsrtk)
+    const db = await connectToDatabase()
     const result = await db.collection(config.collections.base).deleteOne(
       { _id: id })
     return result.result.n === 1
@@ -102,7 +116,7 @@ const deleteBaseFromDatabase = async (id) => {
 
 const isBaseValid = async (id) => {
   try {
-    const db = await connectToDatabase(config.database.gpsrtk)
+    const db = await connectToDatabase()
     const result = await db.collection(config.collections.base).findOne({ _id: id, lastUpdate: { $gt: Date.now() - config.validity } })
     return result != null
   } catch (err) {
@@ -157,3 +171,5 @@ exports.deleteBaseFromDatabase = deleteBaseFromDatabase
 exports.getClosestBase = getClosestBase
 exports.getBaseById = getBaseById
 exports.updateBaseLastUpdate = updateBaseLastUpdate
+exports.updateBasePosition = updateBasePosition
+exports.updateBaseMeanAcc = updateBaseMeanAcc

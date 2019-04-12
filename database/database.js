@@ -11,13 +11,18 @@ const config = require('./config.json')
 const { MongoClient, ObjectId } = require('../node_modules/mongodb')
 const mongoClient = new MongoClient(config.mongoUri, { useNewUrlParser: true })
 const mongoConnection = mongoClient.connect()
+var db = null
 
-const connectToDatabase = async (database) => {
+const connectToDatabase = async () => {
   try {
-    // console.log('Connection to database')
-    const connect = mongoConnection
-    await connect
-    return mongoClient.db(database)
+    if (db) {
+      return db
+    } else {
+      const connect = mongoConnection
+      await connect
+      db = await mongoClient.db(config.database.gpsrtk)
+      return db
+    }
   } catch (err) {
     console.log('connectToDatabase : Unable to connect database : ' + err)
   }

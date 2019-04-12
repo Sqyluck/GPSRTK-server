@@ -7,7 +7,7 @@ const {
 
 const addRoverToDatabase = async (latitude, longitude, status) => {
   try {
-    const db = await connectToDatabase(config.database.gpsrtk)
+    const db = await connectToDatabase()
     const result = await db.collection(config.collections.rover).insertOne(
       { latitude, longitude, status, fixed: false })
     return result.ops[0]._id
@@ -18,7 +18,7 @@ const addRoverToDatabase = async (latitude, longitude, status) => {
 
 const updateRoverPositionById = async (latitude, longitude, status, roverId, fixed) => {
   try {
-    const db = await connectToDatabase(config.database.gpsrtk)
+    const db = await connectToDatabase()
     const result = await db.collection(config.collections.rover).findOneAndUpdate(
       { _id: ObjectId(roverId) },
       { $set: { latitude, longitude, status, fixed } })
@@ -31,7 +31,7 @@ const updateRoverPositionById = async (latitude, longitude, status, roverId, fix
 
 const setRoverFixed = async (roverId) => {
   try {
-    const db = await connectToDatabase(config.database.gpsrtk)
+    const db = await connectToDatabase()
     const result = await db.collection(config.collections.rover).findOneAndUpdate(
       { _id: ObjectId(roverId) },
       { $set: { fixed: true } })
@@ -44,7 +44,7 @@ const setRoverFixed = async (roverId) => {
 
 const getallRoversFromDatabase = async () => {
   try {
-    const db = await connectToDatabase(config.database.gpsrtk)
+    const db = await connectToDatabase()
     const result = await db.collection(config.collections.rover).find({})
     return result.toArray()
   } catch (err) {
@@ -54,7 +54,7 @@ const getallRoversFromDatabase = async () => {
 
 const getRoverFromDatabase = async (roverId) => {
   try {
-    const db = await connectToDatabase(config.database.gpsrtk)
+    const db = await connectToDatabase()
     const result = await db.collection(config.collections.rover).findOne(
       { _id: roverId }
     )
@@ -66,7 +66,7 @@ const getRoverFromDatabase = async (roverId) => {
 
 const deleteRoverById = async (roverId) => {
   try {
-    const db = await connectToDatabase(config.database.gpsrtk)
+    const db = await connectToDatabase()
     const result = await db.collection(config.collections.rover).deleteOne(
       { _id: ObjectId(roverId) })
     // console.log(result.result)
@@ -78,7 +78,7 @@ const deleteRoverById = async (roverId) => {
 
 const deleteAllRovers = async () => {
   try {
-    const db = await connectToDatabase(config.database.gpsrtk)
+    const db = await connectToDatabase()
     const result = await db.collection(config.collections.rover).remove({})
     console.log('remove: ' + result)
     return result != null

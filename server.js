@@ -5,6 +5,9 @@ const express = require('express')
 const app = express()
 
 // respond with 'hello world' when a GET request is made to the homepage
+//
+//
+const { connectToDatabase } = require('./database/database.js')
 const {
   logDatetime,
   analyzeData,
@@ -24,12 +27,14 @@ const {
 const server = net.createServer({ allowHalfOpen: false })
 
 const color = require('./color.js')
+
 /**
  * Start server
  */
 
-server.listen(6666, '192.168.1.106', () => {
+server.listen(6666, '192.168.1.106', async () => {
   console.log('\x1b[33m', '----- ' + logDatetime() + ' ----- Server listening at ' + server.address().address + ':' + server.address().port)
+  // await connectToDatabase('rtk')
 })
 
 /**
@@ -135,8 +140,10 @@ server.on('connection', async (socket) => {
         }
         // data received by base
       } else if (result.value === '!got') {
-        client.rest = result.rest
-        console.log(color.base, '[' + client.status + '] : RTCM Received from base') // : [' + logDatetime() + ']
+        if (result.rest) {
+          client.rest = result.rest
+          console.log(color.base, '[' + client.status + '] : RTCM Received from base') // : [' + logDatetime() + ']
+        }
 
         // data send to rover
       } else if (Array.isArray(result.value)) {
