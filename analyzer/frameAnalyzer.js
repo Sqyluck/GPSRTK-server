@@ -64,7 +64,6 @@ const base = async (rest, data, id) => {
       }
     } else {
       console.log(color.base, '<-- [' + res.result + '] Rtcm Received ' + (res.response ? '(end)' : '(+)'))
-      // logger.info('[BASE] <-- [' + res.result + '] Rtcm Received')
       if (res.response) {
         return {
           value: '!got',
@@ -87,8 +86,7 @@ const rover = async (data, baseId, roverId, nbTry, msgId) => {
   console.log(color.rover, '[ROVER] [' + msgId + '] Status: ' + result.status)
   let threshold = 10
   if (result.result) {
-    // if ((result.status === 'Fixed RTK') || (nbTry === threshold)) {
-    if (nbTry === threshold) {
+    if ((nbTry === threshold) || (result.status === 'Fixed RTK')) {
       await updateRoverPositionById(getLonLatInDec(result.latitude), getLonLatInDec(result.longitude), result.status, roverId, true)
       console.log(color.rover, '[ROVER]: Fix point found: ' + '{' + result.status + '}')
       logger.info('[ROVER]: Fix point found: ' + '{' + result.status + '}')
@@ -99,11 +97,9 @@ const rover = async (data, baseId, roverId, nbTry, msgId) => {
     } else if (nbTry < threshold) {
       await updateRoverPositionById(getLonLatInDec(result.latitude), getLonLatInDec(result.longitude), result.status, roverId, false)
       const rtcmPacket = await getFramesFromDatabase(baseId)
-      // console.log(color.rover, '[ROVER]: RTCM send, status: {' + result.status + '}')
-      // logger.info('[ROVER]: RTCM send, status: {' + result.status + '}')
       if (rtcmPacket.length === 0) {
         return {
-          value: rtcmPacket,
+          value: '!ndat',
           nb_try: nbTry
         }
       } else {
@@ -117,7 +113,6 @@ const rover = async (data, baseId, roverId, nbTry, msgId) => {
       logger.error('rover +1: ' + nbTry)
     }
   } else {
-    // console.log(color.rover, 'rover failed: ' + JSON.stringify(result))
     console.log(color.rover, '[ROVER] data received: ' + data.toString())
     logger.error('rover failed: ' + JSON.stringify(result))
     return {
@@ -141,7 +136,6 @@ const checkConnectionFrame = async (frame) => {
     const status = positionData[6]
     const latitude = getLonLatInDec(positionData[2])
     const longitude = getLonLatInDec(positionData[4])
-    console.log('{latitude: ' + latitude + ', longitude: ' + longitude + '}')
     const result = {
       status: connectionData[1],
       connected: (((connectionData[1] === 'BASE') || (connectionData[1] === 'ROVER')) && (Number(status) !== 0))
@@ -184,18 +178,12 @@ const prepareFrame = (frame, type) => {
   let size = null
   let str = ''
   if (frame[0] === '!') {
-    // console.log(frame)
-    // console.log(Buffer.from(frame))
-    // console.log(Buffer.from(frame.slice(1)).toString('hex'))
     size = new Uint8Array([frame.length << 8, frame.length])
     str = size[0].toString(16).padStart(2, '0') + size[1].toString(16).padStart(2, '0') + '21' + Buffer.from(frame.slice(1)).toString('hex')
   } else {
-    // console.log((frame.length / 2) + 1)
     size = new Uint8Array([((frame.length / 2) + 1) >> 8, (frame.length / 2) + 1])
-    // console.log(size)
     str = size[0].toString(16).padStart(2, '0') + size[1].toString(16).padStart(2, '0') + '21' + frame
   }
-  // console.log(str)
   return Buffer.from(str, 'hex')
 }
 

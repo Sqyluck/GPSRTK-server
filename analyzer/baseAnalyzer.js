@@ -43,7 +43,6 @@ const analyzeAndSaveData = async (rest, data, id) => {
     var dataInfo = data.toString().split('$')
     var svinInfo = dataInfo[0].split('!')
     if (svinInfo[1] === 'svinacc') {
-      console.log(data[9].toString(16).padStart(2, '0') + ' ' + data[10].toString(16).padStart(2, '0') + ' ' + data[11].toString(16).padStart(2, '0') + ' ' + data[12].toString(16).padStart(2, '0'))
       var meanAcc = data[9] << 24 | data[10] << 16 | data[11] << 8 | data[12]
       meanAcc /= 10000
       await updateBaseMeanAcc(id, meanAcc)
@@ -57,12 +56,9 @@ const analyzeAndSaveData = async (rest, data, id) => {
       }
     }
     var ggaInfo = dataInfo[1].split(',')
-    // console.log('[' + ggaInfo[2] + ', ' + ggaInfo[4] + ']')
     if ((ggaInfo[2]) && (ggaInfo[4])) {
-      // console.log(getLonLatInDec(ggaInfo[2]) + ', ' + getLonLatInDec(ggaInfo[4]) + ', ' + id)
       await updateBasePosition(getLonLatInDec(ggaInfo[2]), getLonLatInDec(ggaInfo[4]), id)
     }
-    // console.log('[BASE] Update base position')
     return { result: -1 }
   }
 

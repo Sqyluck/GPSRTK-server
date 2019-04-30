@@ -1,8 +1,7 @@
 var app = angular.module('gpsrtk-app', [])
 
-
-const latOffset = 0.000000
-const lngOffset = 0.000000
+// const $scope.latOffset = 0.000000
+// const $scope.lngOffset = 0.000000
 var mouseMarker = null
 
 app.controller('main', ['$scope', '$http', function ($scope, $http) {
@@ -15,6 +14,9 @@ app.controller('main', ['$scope', '$http', function ($scope, $http) {
   $scope.bases = []
   $scope.roverId = null
   $scope.tempMarker = null
+  $scope.offset = false
+  $scope.latOffset = 0
+  $scope.lngOffset = 0
 
   $scope.records = [{ name: 'test1', _id: 55 },
     { name: 'test2', _id: 56 },
@@ -101,6 +103,18 @@ app.controller('main', ['$scope', '$http', function ($scope, $http) {
     })
   }
 
+  $scope.setOffset = () => {
+    $scope.offset = !$scope.offset
+    console.log($scope.offset)
+    if ($scope.offset) {
+      $scope.latOffset = -0.0000089
+      $scope.lngOffset = 0.0000040
+    } else {
+      $scope.latOffset = 0
+      $scope.lngOffset = 0
+    }
+  }
+
   $scope.showPrecisePoint = () => {
     if ($scope.roverId) {
       $http({
@@ -116,9 +130,9 @@ app.controller('main', ['$scope', '$http', function ($scope, $http) {
           if ($scope.currentRecord.length > 0) {
             if ($scope.currentRecord[$scope.currentRecord.length - 1].lat !== rover.latitude) {
               console.log('push length > 0')
-              $scope.currentRecord.push({ lat: rover.latitude + latOffset, lon: rover.longitude + lngOffset, status: rover.status })
+              $scope.currentRecord.push({ lat: rover.latitude, lon: rover.longitude, status: rover.status })
               $scope.markers.push(new google.maps.Marker({
-                position: { lat: rover.latitude + latOffset, lng: rover.longitude + lngOffset },
+                position: { lat: rover.latitude + $scope.latOffset, lng: rover.longitude + $scope.lngOffset },
                 map: map,
                 icon: chooseRoverIcon(rover.status),
                 clickable: false
@@ -126,9 +140,9 @@ app.controller('main', ['$scope', '$http', function ($scope, $http) {
             }
           } else {
             console.log('push length == 0')
-            $scope.currentRecord.push({ lat: rover.latitude + latOffset, lon: rover.longitude + lngOffset, status: rover.status })
+            $scope.currentRecord.push({ lat: rover.latitude, lon: rover.longitude, status: rover.status })
             $scope.markers.push(new google.maps.Marker({
-              position: { lat: rover.latitude + latOffset, lng: rover.longitude + lngOffset },
+              position: { lat: rover.latitude + $scope.latOffset, lng: rover.longitude + $scope.lngOffset },
               map: map,
               icon: chooseRoverIcon(rover.status),
               clickable: false
@@ -138,14 +152,14 @@ app.controller('main', ['$scope', '$http', function ($scope, $http) {
           if ($scope.tempMarker) {
             $scope.tempMarker.setMap(null)
             $scope.tempMarker =  new google.maps.Marker({
-              position: { lat: rover.latitude + latOffset, lng: rover.longitude + lngOffset },
+              position: { lat: rover.latitude + $scope.latOffset, lng: rover.longitude + $scope.lngOffset },
               map: map,
               icon: chooseRoverIcon(rover.status),
               clickable: false
             })
           } else {
             $scope.tempMarker =  new google.maps.Marker({
-              position: { lat: rover.latitude + latOffset, lng: rover.longitude + lngOffset },
+              position: { lat: rover.latitude + $scope.latOffset, lng: rover.longitude + $scope.lngOffset },
               map: map,
               icon: chooseRoverIcon(rover.status),
               clickable: false
@@ -174,9 +188,10 @@ app.controller('main', ['$scope', '$http', function ($scope, $http) {
   }
 
   var loadRecord = () => {
+    getRecords()
     $scope.currentRecord.forEach((record) => {
       $scope.markers.push(new google.maps.Marker({
-        position: { lat: record.lat, lng: record.lon },
+        position: { lat: record.lat + $scope.latOffset, lng: record.lon +$scope.lngOffset },
         map: map,
         icon: chooseRoverIcon(record.status),
         clickable: false
@@ -192,11 +207,10 @@ app.controller('main', ['$scope', '$http', function ($scope, $http) {
     }).then((data) => {
       let bases = data.data
       bases.forEach((base, index) => {
-        console.log($scope.bases[index].position.lat() + ' ' + base.latitude + ' ' + $scope.bases[index].position.lng() + ' ' + base.longitude)
         if (($scope.bases[index].position.lat !== base.latitude) || ($scope.bases[index].position.lng !== base.longitude)) {
           $scope.bases[index].setMap(null)
           $scope.bases[index] = new google.maps.Marker({
-            position: { lat: base.latitude + latOffset, lng: base.longitude + lngOffset },
+            position: { lat: base.latitude + $scope.latOffset, lng: base.longitude + $scope.lngOffset },
             map: map,
             icon: baseIcon,
             clickable: false
@@ -204,7 +218,6 @@ app.controller('main', ['$scope', '$http', function ($scope, $http) {
           change = true
         }
       })
-      console.log(change)
       if (change) {
         setTimeout(base, 2000)
       }
@@ -223,7 +236,7 @@ app.controller('main', ['$scope', '$http', function ($scope, $http) {
       bases.forEach((base) => {
         console.log(base)
         $scope.bases.push(new google.maps.Marker({
-          position: { lat: base.latitude + latOffset, lng: base.longitude + lngOffset },
+          position: { lat: base.latitude + $scope.latOffset, lng: base.longitude + $scope.lngOffset },
           map: map,
           icon: baseIcon,
           clickable: false
@@ -340,7 +353,7 @@ const chooseRoverIcon = (status) => {
               }
               markers[index].marker = new google.maps.Marker({
                 title: 'position: {' + rover.latitude + ', ' + rover.longitude + '}',
-                position: { lat: rover.latitude + latOffset, lng: rover.longitude + lngOffset },
+                position: { lat: rover.latitude + $scope.latOffset, lng: rover.longitude + $scope.lngOffset },
                 icon: chooseRoverIcon(rover.status),
                 map: map
               })
@@ -352,7 +365,7 @@ const chooseRoverIcon = (status) => {
             if (markers[index].fixed === true) {
               markers[index].fixed = false
             }
-            markers[index].marker = new google.maps.Marker({ position: { lat: rover.latitude + latOffset, lng: rover.longitude + lngOffset }, map: map, icon: chooseRoverIcon(rover.status), clickable: false })
+            markers[index].marker = new google.maps.Marker({ position: { lat: rover.latitude + $scope.latOffset, lng: rover.longitude + $scope.lngOffset }, map: map, icon: chooseRoverIcon(rover.status), clickable: false })
           }
         } else {
           markers[index] = { marker: null, fixed: false }

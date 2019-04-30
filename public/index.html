@@ -9,7 +9,7 @@
 	<title>Carte</title>
 	</head>
 	<body>
-		<div ng-controller="main">
+		<div ng-controller="main" class="main">
 	      <p> Select record:
 	        <select name="repeatSelect" id="repeatSelect" ng-model="recordSelect">
 						<option value="{{null}}"></option>
@@ -35,7 +35,7 @@
         <a ng-class="(saveName != '' && saveName != null) ? 'selected' : 'unSelected'" ng-click="saveRecord()">SAVE<a/>
       </p>
       <a ng-class="'stop'" ng-click="newRecord()"> CLEAR </a>
-
+			<a ng-class="offset ? 'selected' : 'unSelected'" ng-click="setOffset()"> OFFSET </a>
       <div id="map"></div>
     </div>
 	</body>

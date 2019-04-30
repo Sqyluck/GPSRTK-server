@@ -81,7 +81,7 @@ server.on('connection', async (socket) => {
     clearTimeout(stillAlive)
   }
 
-  const remoteAddress = socket.remoteAddress + ':' + socket.remotePort
+  const remoteAddress = socket.remoteAddress.toString().split(':')[3] + ':' + socket.remotePort
   console.log('\x1b[33m', 'socket connected from ' + remoteAddress)
   logger.info('[Connexion] Socket connected from ' + remoteAddress)
 
@@ -126,11 +126,10 @@ server.on('connection', async (socket) => {
     if (client.status) {
       if ((data.toString().slice(8, 14) === '!BASE!') || (data.toString().slice(8, 15) === '!ROVER!')) {
         console.log('!ok not received by client')
-        logger.info(' ' + logDatetime() + ' !ok not received by client')
+        logger.info(' ' + logDatetime() + ' !ok not received by client ' + remoteAddress)
         client.status = null
       }
-      if (client.status === 'BASE') {
-      } else {
+      if (client.status === 'ROVER') {
         client.msgId = data[0]
       }
     }
@@ -143,26 +142,14 @@ server.on('connection', async (socket) => {
 
       // Send responses to clients
       if (Array.isArray(result.value)) {
-        if (result.value.length === 0) {
-          socket.write(Buffer.from(prepareFrame('!ndat')))
-        } else {
-          if (socket.remoteAddress === '::ffff:185.31.150.150') {
-            console.log(color.admin, '--> [' + result.value.length + '] Rtcm Send')
-          } else {
-            client.msgId = data[0]
-          }
-          sendData(result.value)
-        }
+        client.msgId = data[0]
+        sendData(result.value)
       } else {
         if (result.value !== '') {
           socket.write(prepareFrame(result.value))
-          /* setTimeout(() => {
-            socket.write(prepareFrame(result.value))
-          }, 200) */
-        } else {
-          console.log(color.base, '[BASE] don\'t ack [' + data.length + ']')
         }
       }
+
       // Manage server side responses
       if (result.socket) {
         Object.assign(client, result.socket)
@@ -178,8 +165,6 @@ server.on('connection', async (socket) => {
           logger.info(' ' + logDatetime() + ' [' + client.status + '] : [' + logDatetime() + '] : Connected')
         }
       } else if (result.value === '!fix') {
-        // stopTimer()
-        // startTimer(600000)
         setTimeout(() => {
           client.nb_try = 0
         }, 5000)
@@ -196,14 +181,24 @@ server.on('connection', async (socket) => {
         if (result.rest) {
           client.rest = result.rest
           console.log(color.base, ' ' + logDatetime() + ' [' + client.status + '] : RTCM Received from base [' + data.length + ']') // : [' + logDatetime() + ']
-          // logger.info(' ' + logDatetime() + ' [' + client.status + '] : RTCM Received from base')
+        }
+      } else if (result.value === '!ndat') {
+        client.ndat++
+        if (client.ndat > 10) {
+          client.baseId = await changeBase(client.roverId)
+          if (client.baseId) {
+            client.ndat = 0
+            console.log('base changed: ' + client.baseId)
+            logger.info(' ' + logDatetime() + ' [ROVER] New base found for rover ' + socket.remoteAddress)
+          } else {
+            logger.info(' ' + logDatetime() + ' [ROVER] No base available after 10 empty messages, rover disconnected')
+            socket.end()
+          }
         }
 
         // data send to rover
       } else if (Array.isArray(result.value)) {
         if (result.value.length === 0) {
-          // client.ndat++
-          // console.log('no data: ' + client.ndat)
           if (client.ndat > 10) {
             client.baseId = await changeBase(client.roverId)
             if (client.baseId) {
@@ -218,7 +213,6 @@ server.on('connection', async (socket) => {
             client.ndat = 0
           }
         }
-        // console.log(color.rover, '[' + client.status + '] : RTCM Send to rover') // : [' + logDatetime() + ']
       }
     }
   })
@@ -256,10 +250,8 @@ server.on('close', () => {
 })
 
 process.on('SIGINT', async () => {
-  // if (await deleteAllRovers()) {
   console.log(color.FgYellow, 'Server closed')
   process.exit()
-  // }
 })
 
 app.use((req, res, next) => {
@@ -297,8 +289,6 @@ app.get('/deleteRecord/:recordId', async (req, res) => {
 
 app.get('/getRover/:roverId', async (req, res) => {
   const rover = await getRoverById(req.params.roverId)
-  // console.log('/getRover/:' + req.params.roverId)
-  // console.log(rover)
   res.json(rover)
 })
 

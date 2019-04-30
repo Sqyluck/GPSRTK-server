@@ -22,6 +22,7 @@
   background-color: grey;
   border-radius: 5px;
   padding: 1px 10px;
+  margin: 2px;
 }
 
 .stop {
@@ -30,6 +31,7 @@
   background-color: red;
   border-radius: 5px;
   padding: 1px 10px;
+  margin: 2px;
 }
 
 .selected {
@@ -38,4 +40,9 @@
   background-color: green;
   border-radius: 5px;
   padding: 1px 10px;
+  margin: 2px;
+}
+
+.main{
+  font-family: arial;
 }
