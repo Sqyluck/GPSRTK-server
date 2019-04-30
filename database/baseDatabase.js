@@ -10,37 +10,29 @@ const { deleteCorrectionsbyBaseId } = require('./correctionsDatabase.js')
 
 const color = require('./../color.js')
 
-const addBaseToDatabase = async (latitude, longitude) => {
+const addBaseToDatabase = async (latitude, longitude, macAddr) => {
   try {
     const db = await connectToDatabase()
-    const baseArray = await getallBasesFromDatabase()
-    var baseId = null
-    await asyncForEach(baseArray, async (base) => {
-      // baseArray.forEach((base) => {
-      var dist = distance(base.latitude, base.longitude, latitude, longitude)
-      if (dist < 10) {
-        baseId = base._id
-        await updateBasePosition(latitude, longitude, baseId)
-        console.log(color.base, 'base found with distance: ' + dist + 'm' + ', base: ' + baseId)
-      }
-    })
-    if (baseId) {
-      return baseId
+    const result = await db.collection(config.collections.base).findOneAndUpdate(
+      { macAddr },
+      { $set: {
+        macAddr,
+        latitude,
+        longitude,
+        date: Date.now(),
+        lastUpdate: Date.now(),
+        meanAcc: 0
+      } },
+      { upsert: true })
+    if (result.lastErrorObject.updatedExisting) {
+      console.log(color.base, '[BASE] Update an existing base')
+      return result.value._id
     } else {
-      console.log('insertOne ')
-      const result = await db.collection(config.collections.base).insertOne(
-        {
-          latitude,
-          longitude,
-          date: Date.now(),
-          lastUpdate: Date.now(),
-          meanAcc: 0
-        }
-      )
-      return result.ops[0]._id
+      console.log(color.base, '[BASE] Insert a new base')
+      return result.lastErrorObject.upserted
     }
   } catch (err) {
-    console.log('addBaseToDatabase: ' + err)
+    console.log(color.base, 'addBaseToDatabase: ' + err)
   }
 }
 
@@ -50,7 +42,7 @@ const getallBasesFromDatabase = async () => {
     const result = await db.collection(config.collections.base).find()
     return result.toArray()
   } catch (err) {
-    console.log('getBasesInformationsFromDatabase: ' + err)
+    console.log(color.base, 'getBasesInformationsFromDatabase: ' + err)
   }
 }
 
@@ -62,7 +54,7 @@ const getBaseById = async (id) => {
     )
     return result
   } catch (err) {
-    console.log('getBaseById: ' + err)
+    console.log(color.base, 'getBaseById: ' + err)
   }
 }
 
@@ -74,7 +66,7 @@ const updateBaseLastUpdate = async (id) => {
       { $set: { lastUpdate: Date.now() } }
     )
   } catch (err) {
-    console.log('updateBaseLastUpdate: ' + err)
+    console.log(color.base, 'updateBaseLastUpdate: ' + err)
   }
 }
 
@@ -86,7 +78,7 @@ const updateBaseMeanAcc = async (id, meanAcc) => {
       { $set: { meanAcc } }
     )
   } catch (err) {
-    console.log('updateBaseMeanAcc: ' + err)
+    console.log(color.base, 'updateBaseMeanAcc: ' + err)
   }
 }
 
@@ -97,9 +89,9 @@ const updateBasePosition = async (latitude, longitude, id) => {
       { _id: ObjectId(id) },
       { $set: { latitude, longitude } }
     )
-    // console.log(result)
+    // console.log(color.base, result)
   } catch (err) {
-    console.log('updateBasePosition: ' + err)
+    console.log(color.base, 'updateBasePosition: ' + err)
   }
 }
 
@@ -110,7 +102,7 @@ const deleteBaseFromDatabase = async (id) => {
       { _id: id })
     return result.result.n === 1
   } catch (err) {
-    console.log('updateFrameByType: ' + err)
+    console.log(color.base, 'updateFrameByType: ' + err)
   }
 }
 
@@ -120,7 +112,7 @@ const isBaseValid = async (id) => {
     const result = await db.collection(config.collections.base).findOne({ _id: id, lastUpdate: { $gt: Date.now() - config.validity } })
     return result != null
   } catch (err) {
-    console.log('isbasevalid: ' + err)
+    console.log(color.base, 'isbasevalid: ' + err)
   }
 }
 
@@ -133,7 +125,7 @@ const getClosestBase = async (latitude, longitude) => {
     }
     await asyncForEach(baseArray, async (base, i) => {
       var dist = distance(base.latitude, base.longitude, latitude, longitude)
-      console.log(color.rover, 'i : [' + i + '], distance: ' + dist + ', base valid: ' + await isBaseValid(base._id))
+      console.log(color.rover, 'i : [' + i + '], distance: ' + dist * 1000 + ', base valid: ' + await isBaseValid(base._id))
       if (await isBaseValid(base._id)) {
         if ((dist < min.dist) || (min.dist === -1)) {
           min.dist = dist
@@ -146,13 +138,13 @@ const getClosestBase = async (latitude, longitude) => {
     })
 
     if (min.dist !== -1) {
-      console.log(color.rover, '[ROVER] Find closest base: ' + min.id + ' : ' + min.dist + 'm')
+      console.log(color.rover, '[ROVER] Find closest base: ' + min.id + ' : ' + min.dist * 1000 + 'm')
     } else {
-      console.log(color.rover, '[ROVER] can\'t find any base: ' + min.id + ' : ' + min.dist + 'm')
+      console.log(color.rover, '[ROVER] can\'t find any base: ' + min.id + ' : ' + min.dist * 1000 + 'm')
     }
     return min.id
   } catch (err) {
-    console.log('getClosestBase: ' + err)
+    console.log(color.base, 'getClosestBase: ' + err)
   }
 }
 

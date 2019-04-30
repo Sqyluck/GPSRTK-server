@@ -6,8 +6,9 @@
   "collections": {
     "corrections": "corrections",
     "base": "base",
-    "rover": "rover"
+    "rover": "rover",
+    "record": "record"
   },
   "correctionsRate": 1000,
-  "validity": 60000
+  "validity": 15000
 }

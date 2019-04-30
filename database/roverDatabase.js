@@ -5,14 +5,24 @@ const {
   ObjectId
 } = require('./database.js')
 
-const addRoverToDatabase = async (latitude, longitude, status) => {
+const color = require('./../color.js')
+
+const addRoverToDatabase = async (latitude, longitude, status, macAddr) => {
   try {
     const db = await connectToDatabase()
-    const result = await db.collection(config.collections.rover).insertOne(
-      { latitude, longitude, status, fixed: false })
-    return result.ops[0]._id
+    const result = await db.collection(config.collections.rover).findOneAndUpdate(
+      { macAddr },
+      { $set: { latitude, longitude, status, fixed: false } },
+      { upsert: true })
+    if (result.lastErrorObject.updatedExisting) {
+      console.log(color.rover, '[ROVER] Update an existing rover')
+      return result.value._id
+    } else {
+      console.log(color.rover, '[ROVER] Insert a new rover')
+      return result.lastErrorObject.upserted
+    }
   } catch (err) {
-    console.log('addRoverToDatabase: ' + err)
+    console.log(color.rover, 'addRoverToDatabase: ' + err)
   }
 }
 
@@ -22,10 +32,10 @@ const updateRoverPositionById = async (latitude, longitude, status, roverId, fix
     const result = await db.collection(config.collections.rover).findOneAndUpdate(
       { _id: ObjectId(roverId) },
       { $set: { latitude, longitude, status, fixed } })
-    // console.log('update rover: ' + JSON.stringify(result))
+    // console.log(color.rover, 'update rover: ' + JSON.stringify(result))
     return result != null
   } catch (err) {
-    console.log('updateRoverrPositionById: ' + err)
+    console.log(color.rover, 'updateRoverrPositionById: ' + err)
   }
 }
 
@@ -35,10 +45,10 @@ const setRoverFixed = async (roverId) => {
     const result = await db.collection(config.collections.rover).findOneAndUpdate(
       { _id: ObjectId(roverId) },
       { $set: { fixed: true } })
-    console.log('update rover fixed: ' + JSON.stringify(result))
+    console.log(color.rover, 'update rover fixed: ' + JSON.stringify(result))
     return result != null
   } catch (err) {
-    console.log('setRoverFixed: ' + err)
+    console.log(color.rover, 'setRoverFixed: ' + err)
   }
 }
 
@@ -48,7 +58,7 @@ const getallRoversFromDatabase = async () => {
     const result = await db.collection(config.collections.rover).find({})
     return result.toArray()
   } catch (err) {
-    console.log('getallRoversFromDatabase: ' + err)
+    console.log(color.rover, 'getallRoversFromDatabase: ' + err)
   }
 }
 
@@ -60,7 +70,7 @@ const getRoverFromDatabase = async (roverId) => {
     )
     return result
   } catch (err) {
-    console.log('getallRoversFromDatabase: ' + err)
+    console.log(color.rover, 'getallRoversFromDatabase: ' + err)
   }
 }
 
@@ -69,10 +79,10 @@ const deleteRoverById = async (roverId) => {
     const db = await connectToDatabase()
     const result = await db.collection(config.collections.rover).deleteOne(
       { _id: ObjectId(roverId) })
-    // console.log(result.result)
+    // console.log(color.rover, result.result)
     return result != null
   } catch (err) {
-    console.log('deleteRoverById: ' + err)
+    console.log(color.rover, 'deleteRoverById: ' + err)
   }
 }
 
@@ -80,10 +90,22 @@ const deleteAllRovers = async () => {
   try {
     const db = await connectToDatabase()
     const result = await db.collection(config.collections.rover).remove({})
-    console.log('remove: ' + result)
+    console.log(color.rover, 'remove: ' + result)
     return result != null
   } catch (err) {
-    console.log('deleteAllRovers: ' + err)
+    console.log(color.rover, 'deleteAllRovers: ' + err)
+  }
+}
+
+const getRoverById = async (roverId) => {
+  try {
+    const db = await connectToDatabase()
+    const result = await db.collection(config.collections.rover).findOne({
+      _id: ObjectId(roverId)
+    })
+    return result
+  } catch (err) {
+    console.log(color.rover, 'deleteAllRovers: ' + err)
   }
 }
 
@@ -94,3 +116,4 @@ exports.deleteAllRovers = deleteAllRovers
 exports.getallRoversFromDatabase = getallRoversFromDatabase
 exports.setRoverFixed = setRoverFixed
 exports.getRoverFromDatabase = getRoverFromDatabase
+exports.getRoverById = getRoverById
