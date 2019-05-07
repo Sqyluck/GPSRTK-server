@@ -7,7 +7,7 @@ const {
 
 const getFramesFromDatabase = async (baseId) => {
   try {
-    const db = await connectToDatabase(config.database.gpsrtk)
+    const db = await connectToDatabase()
     var result = await db.collection(config.collections.corrections).find(
       {
         baseId: ObjectId(baseId),
@@ -22,7 +22,7 @@ const getFramesFromDatabase = async (baseId) => {
 
 const updateFrameByType = async (type, data, baseId) => {
   try {
-    const db = await connectToDatabase(config.database.gpsrtk)
+    const db = await connectToDatabase()
     const result = await db.collection(config.collections.corrections).findOneAndUpdate(
       { type, baseId },
       { $set: {
@@ -40,7 +40,7 @@ const updateFrameByType = async (type, data, baseId) => {
 
 const resetCorrectionsTable = async () => {
   try {
-    const db = await connectToDatabase(config.database.gpsrtk)
+    const db = await connectToDatabase()
     const result = await db.collection(config.collections.corrections).deleteMany({})
     return result.result.n !== 0
   } catch (err) {
@@ -50,8 +50,9 @@ const resetCorrectionsTable = async () => {
 
 const deleteCorrectionsbyBaseId = async (baseId) => {
   try {
-    const db = await connectToDatabase(config.database.gpsrtk)
+    const db = await connectToDatabase()
     const result = await db.collection(config.collections.corrections).deleteMany({ baseId })
+    console.log(result)
     return result.result.n !== 0
   } catch (err) {
     console.log('resetCorrectionsTable: ' + err)

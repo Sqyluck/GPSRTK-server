@@ -1,13 +1,14 @@
 {
-  "mongoUri": "mongodb://192.168.1.10:27017",
+  "mongoUri": "mongodb://rtkUser:QsqtjLor5Xrp@krcq1j.stackhero-network.com:27017/rtk?ssl=true",
   "database": {
-    "gpsrtk": "gpsrtk"
+    "gpsrtk": "rtk"
   },
   "collections": {
     "corrections": "corrections",
     "base": "base",
-    "rover": "rover"
+    "rover": "rover",
+    "record": "record"
   },
   "correctionsRate": 1000,
-  "validity": 60000
+  "validity": 15000
 }

@@ -26,3 +26,4 @@ exports.BgWhite = '\x1B[47m'
 
 exports.rover = '\x1B[32m'
 exports.base = '\x1B[36m'
+exports.admin = '\x1B[35m'
