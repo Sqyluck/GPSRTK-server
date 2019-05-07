@@ -10,32 +10,53 @@
 	</head>
 	<body>
 		<div ng-controller="main" class="main">
-	      <p> Select record:
-	        <select name="repeatSelect" id="repeatSelect" ng-model="recordSelect">
-						<option value="{{null}}"></option>
-	          <option ng-repeat="record in records" value="{{record._id}}">{{record.name}}</option>
-	        </select>
-	        <a  ng-class="recordSelect ? 'selected' : 'unSelected'" ng-click="select()">LOAD<a/>
-	      Delete record:
-        <select name="repeatSelect" id="repeatSelect" ng-model="recordDelete">
-					<option value="{{null}}"></option>
-          <option ng-repeat="record in records" value="{{record._id}}">{{record.name}}</option>
-        </select>
-				<a ng-class="recordDelete ? 'selected' : 'unSelected'" ng-click="delete()">DELETE<a/>
-      </p>
-      <p> Select rover:
-        <select name="repeatSelect" id="repeatSelect" ng-model="roverSelect">
-					<option value="{{null}}"></option>
-          <option ng-repeat="rover in rovers" value="{{rover._id}}">{{rover.macAddr.toString()}}</option>
-        </select>
-        <a ng-show="!roverId" ng-class="roverSelect ? 'selected' : 'unSelected'" ng-click="followRover()"> START <a/>
-				<a ng-show="roverId" ng-class="'stop'" ng-click="followRover()"> STOP <a/>
-        Save record
-        <input type="text" ng-model="saveName">
-        <a ng-class="(saveName != '' && saveName != null) ? 'selected' : 'unSelected'" ng-click="saveRecord()">SAVE<a/>
-      </p>
-      <a ng-class="'stop'" ng-click="newRecord()"> CLEAR </a>
-			<a ng-class="offset ? 'selected' : 'unSelected'" ng-click="setOffset()"> OFFSET </a>
+			<table>
+				<tr>
+					<td class="td1">
+			      <p> Select record:
+			        <select name="repeatSelect" id="repeatSelect" ng-model="recordSelect">
+								<option value="{{null}}"></option>
+			          <option ng-repeat="record in records" value="{{record._id}}">{{record.name}}</option>
+			        </select>
+			        <a  ng-class="recordSelect ? 'selected' : 'unSelected'" ng-click="select()">LOAD<a/>
+						</p>
+					</td><td class="td2">
+			      <p> Delete record:
+		        <select name="repeatSelect" id="repeatSelect" ng-model="recordDelete">
+							<option value="{{null}}"></option>
+		          <option ng-repeat="record in records" value="{{record._id}}">{{record.name}}</option>
+		        </select>
+						<a ng-class="recordDelete ? 'selected' : 'unSelected'" ng-click="delete()">DELETE<a/>
+		      </p>
+				</td>
+			</tr><tr>
+				<td class="td1">
+		      <p> Select rover:
+		        <select ng-show="!roverId" name="repeatSelect" id="repeatSelect" ng-model="roverSelect">
+							<option value="{{null}}"></option>
+		          <option ng-repeat="rover in rovers" value="{{rover._id}}">{{rover.macAddr.toString()}}</option>
+		        </select>
+						<a ng-show="roverId">{{macAddr}}</a>
+		        <a ng-show="!roverId" ng-class="roverSelect ? 'selected' : 'unSelected'" ng-click="followRover()"> START <a/>
+						<a ng-show="roverId" ng-class="'stop'" ng-click="followRover()"> STOP <a/>
+						</p>
+					</td><td class="td2">
+						<p> Save record
+			        <input type="text" ng-model="saveName">
+			        <a ng-class="(saveName != '' && saveName != null) ? 'selected' : 'unSelected'" ng-click="saveRecord()">SAVE<a/>
+			      </p>
+					</td>
+				</tr><tr>
+					<td class="td1">
+			      <a ng-class="'stop'" ng-click="newRecord()"> CLEAR MAP </a>
+					</td><td class="td2">
+						Offset:   lat: <input type="text" ng-model="lat">
+						lng: <input type="text" ng-model="lng">
+						<a ng-class="lat !== '' && lng !== '' && lat != null && lng != null ? 'selected' : 'unSelected'" ng-click="setOffset()"> SET </a>
+						<a ng-class="'stop'" ng-show="latOffset !== 0 && lngOffset !== 0" ng-click="clearOffset()"> CLEAR </a>
+					</td>
+				</tr>
+			</table>
       <div id="map"></div>
     </div>
 	</body>

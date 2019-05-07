@@ -11,7 +11,7 @@
 }
 
 #map{ /* la carte DOIT avoir une hauteur sinon elle n'apparaît pas */
-  height:70vh;
+  height:85vh;
   width: 99vw;
   margin: 5px;
 }
@@ -45,4 +45,20 @@
 
 .main{
   font-family: arial;
+}
+
+.td1 {
+  padding: 5px;
+  height: 20px;
+  width: 400px;
+}
+
+.td2 {
+  padding: 5px;
+  height: 20px;
+  width: 700px;
+}
+
+p {
+  margin: 0;
 }

@@ -52,6 +52,7 @@ const deleteCorrectionsbyBaseId = async (baseId) => {
   try {
     const db = await connectToDatabase()
     const result = await db.collection(config.collections.corrections).deleteMany({ baseId })
+    console.log(result)
     return result.result.n !== 0
   } catch (err) {
     console.log('resetCorrectionsTable: ' + err)

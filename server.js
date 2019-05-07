@@ -23,7 +23,8 @@ const {
 } = require('./database/roverDatabase.js')
 
 const {
-  getallBasesFromDatabase
+  getallBasesFromDatabase,
+  setTrueAltitudeById
 } = require('./database/baseDatabase.js')
 
 const {
@@ -49,6 +50,7 @@ const { logger } = require('./logger.js')
 server.listen(6666, async () => {
   logger.info('----- ' + logDatetime() + ' ----- Server listening at ' + server.address().address + ':' + server.address().port)
   console.log('\x1b[33m', '----- ' + logDatetime() + ' ----- Server listening at ' + server.address().address + ':' + server.address().port)
+  console.log(await setTrueAltitudeById(20.21, '5cd00f4d4a65d09a3c81d708'))
 })
 
 /**
@@ -56,30 +58,12 @@ server.listen(6666, async () => {
  */
 server.on('connection', async (socket) => {
   socket.setNoDelay(true)
-  // socket.setKeepAlive(true, 10000)
   var client = {
     connFailed: 0,
     ndat: 0
   }
-  var stillAlive = null
-
-  const startTimer = (time) => {
-    stillAlive = setTimeout(() => {
-      if (client.status === 'ROVER') {
-        console.log(color.rover, '(!)[' + client.status + '] : Disconnected from server')
-        // deleteRoverById(client.roverId)
-      } else {
-        console.log(color.base, '(!)[' + client.status + '] : Disconnected from server')
-      }
-      // client = {}
-      socket.write('stillAlive?')
-      // socket.end()
-    }, time)
-  }
-
-  const stopTimer = () => {
-    clearTimeout(stillAlive)
-  }
+  var counter = 0
+  var msgSize = 0
 
   const remoteAddress = socket.remoteAddress.toString().split(':')[3] + ':' + socket.remotePort
   console.log('\x1b[33m', 'socket connected from ' + remoteAddress)
@@ -131,6 +115,7 @@ server.on('connection', async (socket) => {
       }
       if (client.status === 'ROVER') {
         client.msgId = data[0]
+        data = data.slice(1)
       }
     }
     const result = await analyzeData(client, data)
@@ -157,12 +142,12 @@ server.on('connection', async (socket) => {
         if (client.status === 'ROVER') {
           client.nb_try = 0
           client.msgId = 0
-          console.log(color.rover, '[' + client.status + '] : [' + logDatetime() + '] : Connected')
-          logger.info(' ' + logDatetime() + ' [' + client.status + '] : [' + logDatetime() + '] : Connected')
+          console.log(color.rover, '[' + client.status + '] : [' + logDatetime() + '] : Connected from : ' + remoteAddress)
+          logger.info(' ' + logDatetime() + ' [' + client.status + '] : [' + logDatetime() + '] : Connected from : ' + remoteAddress)
         } else {
           client.rest = Buffer.from('')
           console.log(color.base, '[' + client.status + '] : [' + logDatetime() + '] : Connected')
-          logger.info(' ' + logDatetime() + ' [' + client.status + '] : [' + logDatetime() + '] : Connected')
+          logger.info(' ' + logDatetime() + ' [' + client.status + '] : [' + logDatetime() + '] : Connected from : ' + remoteAddress)
         }
       } else if (result.value === '!fix') {
         setTimeout(() => {
@@ -180,8 +165,16 @@ server.on('connection', async (socket) => {
       } else if (result.value === '!got') {
         if (result.rest) {
           client.rest = result.rest
-          console.log(color.base, ' ' + logDatetime() + ' [' + client.status + '] : RTCM Received from base [' + data.length + ']') // : [' + logDatetime() + ']
+          if (counter % 100 === 0) {
+            logger.info(' ' + logDatetime() + ' [' + client.status + '] : RTCM Received from base [' + data.length + ']')
+          }
+          counter++
+          msgSize += data.length
+          console.log(color.base, ' ' + logDatetime() + ' [' + client.status + '] : RTCM Received from base [' + msgSize + ']') // : [' + logDatetime() + ']
+          msgSize = 0
         }
+      } else if (result.value === '') {
+        msgSize += data.length
       } else if (result.value === '!ndat') {
         client.ndat++
         if (client.ndat > 10) {
@@ -231,13 +224,11 @@ server.on('connection', async (socket) => {
   socket.on('close', () => {
     console.log(client.status === 'ROVER' ? color.rover : color.base, '----- ' + logDatetime() + ' ----- Close connection from ' + remoteAddress)
     logger.info('---------' + logDatetime() + ' Connection Closed from ' + remoteAddress + '-----------')
-    client = {}
-    stopTimer()
   })
 
   socket.on('error', (err) => {
-    console.log('----- ' + logDatetime() + ' ----- Connection ' + remoteAddress + ' error: ' + err.message + ', (on error)' + ' [' + client.status + ']')
-    logger.info('----- ' + logDatetime() + ' ----- Connection ' + remoteAddress + ' error: ' + err.message)
+    console.log('----- ' + logDatetime() + ' ----- ERROR ' + remoteAddress + ' error: ' + err.message + ' : ' + err.stack + ', (on error)' + ' [' + client.status + ']')
+    logger.info('----- ' + logDatetime() + ' ----- ERROR ' + remoteAddress + ' error: ' + err.message + ' : ' + err.stack)
   })
 })
 

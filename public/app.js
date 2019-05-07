@@ -17,6 +17,7 @@ app.controller('main', ['$scope', '$http', function ($scope, $http) {
   $scope.offset = false
   $scope.latOffset = 0
   $scope.lngOffset = 0
+  $scope.altitude = 0
 
   $scope.records = [{ name: 'test1', _id: 55 },
     { name: 'test2', _id: 56 },
@@ -104,15 +105,15 @@ app.controller('main', ['$scope', '$http', function ($scope, $http) {
   }
 
   $scope.setOffset = () => {
-    $scope.offset = !$scope.offset
-    console.log($scope.offset)
-    if ($scope.offset) {
-      $scope.latOffset = -0.0000089
-      $scope.lngOffset = 0.0000040
-    } else {
-      $scope.latOffset = 0
-      $scope.lngOffset = 0
+    if (($scope.lat != null) && ($scope.lng != null) && ($scope.lat !== '') && ($scope.lng !== '')) {
+      $scope.latOffset = Number($scope.lat)
+      $scope.lngOffset = Number($scope.lng)
     }
+  }
+
+  $scope.clearOffset = () => {
+    $scope.latOffset = 0
+    $scope.lngOffset = 0
   }
 
   $scope.showPrecisePoint = () => {
@@ -130,22 +131,24 @@ app.controller('main', ['$scope', '$http', function ($scope, $http) {
           if ($scope.currentRecord.length > 0) {
             if ($scope.currentRecord[$scope.currentRecord.length - 1].lat !== rover.latitude) {
               console.log('push length > 0')
-              $scope.currentRecord.push({ lat: rover.latitude, lon: rover.longitude, status: rover.status })
+              $scope.currentRecord.push({ altitude: rover.altitude - $scope.altitude, lat: rover.latitude, lon: rover.longitude, status: rover.status })
               $scope.markers.push(new google.maps.Marker({
                 position: { lat: rover.latitude + $scope.latOffset, lng: rover.longitude + $scope.lngOffset },
                 map: map,
                 icon: chooseRoverIcon(rover.status),
-                clickable: false
+                clickable: true,
+                title: '{' + rover.altitude - $scope.altitude + 'm, ' + rover.latitude + $scope.latOffset + ', ' + rover.longitude + $scope.lngOffset + '}'
               }))
             }
           } else {
             console.log('push length == 0')
-            $scope.currentRecord.push({ lat: rover.latitude, lon: rover.longitude, status: rover.status })
+            $scope.currentRecord.push({ altitude: rover.altitude - $scope.altitude, lat: rover.latitude, lon: rover.longitude, status: rover.status })
             $scope.markers.push(new google.maps.Marker({
               position: { lat: rover.latitude + $scope.latOffset, lng: rover.longitude + $scope.lngOffset },
               map: map,
               icon: chooseRoverIcon(rover.status),
-              clickable: false
+              clickable: true,
+              title: '{' + rover.altitude - $scope.altitude + 'm, ' + rover.latitude + $scope.latOffset + ', ' + rover.longitude + $scope.lngOffset + '}'
             }))
           }
         } else {
@@ -174,6 +177,9 @@ app.controller('main', ['$scope', '$http', function ($scope, $http) {
   $scope.followRover = () => {
     $scope.roverId = $scope.roverSelect
     $scope.roverSelect = null
+    if ($scope.roverId) {
+      $scope.macAddr = $scope.rovers.find(rover => rover._id === $scope.roverId).macAddr
+    }
     $scope.showPrecisePoint()
   }
 
@@ -191,10 +197,11 @@ app.controller('main', ['$scope', '$http', function ($scope, $http) {
     getRecords()
     $scope.currentRecord.forEach((record) => {
       $scope.markers.push(new google.maps.Marker({
-        position: { lat: record.lat + $scope.latOffset, lng: record.lon +$scope.lngOffset },
+        position: { lat: record.lat + $scope.latOffset, lng: record.lon + $scope.lngOffset },
         map: map,
         icon: chooseRoverIcon(record.status),
-        clickable: false
+        clickable: true,
+        title: '{' + (record.altitude - $scope.altitude) + 'm, ' + record.lat + $scope.latOffset + ', ' + record.lon + $scope.lngOffset + '}'
       }))
     })
   }
@@ -206,14 +213,18 @@ app.controller('main', ['$scope', '$http', function ($scope, $http) {
       url: $scope.ipAddress + '/allBases'
     }).then((data) => {
       let bases = data.data
+      console.log(bases[0].altitude)
+      $scope.altitude = Number(bases[0].altitude)
       bases.forEach((base, index) => {
         if (($scope.bases[index].position.lat !== base.latitude) || ($scope.bases[index].position.lng !== base.longitude)) {
           $scope.bases[index].setMap(null)
+          console.log(base.altitude - $scope.altitude)
           $scope.bases[index] = new google.maps.Marker({
             position: { lat: base.latitude + $scope.latOffset, lng: base.longitude + $scope.lngOffset },
             map: map,
             icon: baseIcon,
-            clickable: false
+            clickable: true,
+            title: '{' + (base.altitude - $scope.altitude) + 'm, ' + base.latitude + ', ' + base.longitude + '}'
           })
           change = true
         }

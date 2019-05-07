@@ -6,7 +6,8 @@ const {
 const {
   addBaseToDatabase,
   deleteBaseFromDatabase,
-  getClosestBase
+  getClosestBase,
+  getRelativeAltitudeByBaseId
 } = require('./../database/baseDatabase.js')
 
 const {
@@ -86,8 +87,10 @@ const rover = async (data, baseId, roverId, nbTry, msgId) => {
   console.log(color.rover, '[ROVER] [' + msgId + '] Status: ' + result.status)
   let threshold = 10
   if (result.result) {
+    let altitude = await getRelativeAltitudeByBaseId(result.altitude, baseId)
+    console.log(result.altitude + 'm, => ' + altitude + 'm')
     if ((nbTry === threshold) || (result.status === 'Fixed RTK')) {
-      await updateRoverPositionById(getLonLatInDec(result.latitude), getLonLatInDec(result.longitude), result.status, roverId, true)
+      await updateRoverPositionById(getLonLatInDec(result.latitude), getLonLatInDec(result.longitude), altitude, result.status, roverId, true)
       console.log(color.rover, '[ROVER]: Fix point found: ' + '{' + result.status + '}')
       logger.info('[ROVER]: Fix point found: ' + '{' + result.status + '}')
       return {
@@ -95,7 +98,7 @@ const rover = async (data, baseId, roverId, nbTry, msgId) => {
         nb_try: threshold + 1
       }
     } else if (nbTry < threshold) {
-      await updateRoverPositionById(getLonLatInDec(result.latitude), getLonLatInDec(result.longitude), result.status, roverId, false)
+      await updateRoverPositionById(getLonLatInDec(result.latitude), getLonLatInDec(result.longitude), altitude, result.status, roverId, false)
       const rtcmPacket = await getFramesFromDatabase(baseId)
       if (rtcmPacket.length === 0) {
         return {
@@ -136,6 +139,8 @@ const checkConnectionFrame = async (frame) => {
     const status = positionData[6]
     const latitude = getLonLatInDec(positionData[2])
     const longitude = getLonLatInDec(positionData[4])
+
+    const altitude = Number(positionData[9])
     const result = {
       status: connectionData[1],
       connected: (((connectionData[1] === 'BASE') || (connectionData[1] === 'ROVER')) && (Number(status) !== 0))
@@ -143,12 +148,13 @@ const checkConnectionFrame = async (frame) => {
     if (!result.connected) {
       return result
     } else if (connectionData[1] === 'BASE') {
-      result.baseId = await addBaseToDatabase(latitude, longitude, macAddr)
+      result.baseId = await addBaseToDatabase(latitude, longitude, altitude, macAddr)
       return result
     } else if (connectionData[1] === 'ROVER') {
       result.baseId = await getClosestBase(latitude, longitude)
       if (result.baseId) {
-        result.roverId = await addRoverToDatabase(latitude, longitude, getStringStatus(status), macAddr)
+        let relAltitude = await getRelativeAltitudeByBaseId(altitude, result.baseId)
+        result.roverId = await addRoverToDatabase(latitude, longitude, relAltitude, getStringStatus(status), macAddr)
       }
       return result
     }

@@ -7,12 +7,14 @@ const {
 
 const color = require('./../color.js')
 
-const addRoverToDatabase = async (latitude, longitude, status, macAddr) => {
+const { getRelativeAltitudeByBaseId } = require('./baseDatabase.js')
+
+const addRoverToDatabase = async (latitude, longitude, altitude, status, macAddr, baseId) => {
   try {
     const db = await connectToDatabase()
     const result = await db.collection(config.collections.rover).findOneAndUpdate(
       { macAddr },
-      { $set: { latitude, longitude, status, fixed: false } },
+      { $set: { latitude, longitude, altitude, status, fixed: false } },
       { upsert: true })
     if (result.lastErrorObject.updatedExisting) {
       console.log(color.rover, '[ROVER] Update an existing rover')
@@ -26,13 +28,12 @@ const addRoverToDatabase = async (latitude, longitude, status, macAddr) => {
   }
 }
 
-const updateRoverPositionById = async (latitude, longitude, status, roverId, fixed) => {
+const updateRoverPositionById = async (latitude, longitude, altitude, status, roverId, fixed, baseId) => {
   try {
     const db = await connectToDatabase()
     const result = await db.collection(config.collections.rover).findOneAndUpdate(
       { _id: ObjectId(roverId) },
-      { $set: { latitude, longitude, status, fixed } })
-    // console.log(color.rover, 'update rover: ' + JSON.stringify(result))
+      { $set: { latitude, longitude, altitude, status, fixed } })
     return result != null
   } catch (err) {
     console.log(color.rover, 'updateRoverrPositionById: ' + err)

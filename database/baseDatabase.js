@@ -10,7 +10,7 @@ const { deleteCorrectionsbyBaseId } = require('./correctionsDatabase.js')
 
 const color = require('./../color.js')
 
-const addBaseToDatabase = async (latitude, longitude, macAddr) => {
+const addBaseToDatabase = async (latitude, longitude, altitude, macAddr) => {
   try {
     const db = await connectToDatabase()
     const result = await db.collection(config.collections.base).findOneAndUpdate(
@@ -19,6 +19,7 @@ const addBaseToDatabase = async (latitude, longitude, macAddr) => {
         macAddr,
         latitude,
         longitude,
+        altitude,
         date: Date.now(),
         lastUpdate: Date.now(),
         meanAcc: 0
@@ -43,6 +44,31 @@ const getallBasesFromDatabase = async () => {
     return result.toArray()
   } catch (err) {
     console.log(color.base, 'getBasesInformationsFromDatabase: ' + err)
+  }
+}
+
+const setTrueAltitudeById = async (altitude, baseId) => {
+  try {
+    const db = await connectToDatabase()
+    const result = await db.collection(config.collections.base).updateOne(
+      { _id: ObjectId(baseId) },
+      { $set: { trueAltitude: altitude } }
+    )
+    return result.result.n != null
+  } catch (err) {
+    console.log(color.base, 'getBaseById: ' + err)
+  }
+}
+
+const getRelativeAltitudeByBaseId = async (altitude, baseId) => {
+  try {
+    const db = await connectToDatabase()
+    const result = await db.collection(config.collections.base).findOne(
+      { _id: baseId }
+    )
+    return altitude - result.altitude + (result.trueAltitude ? result.trueAltitude : 0)
+  } catch (err) {
+    console.log(color.base, 'getBaseById: ' + err)
   }
 }
 
@@ -82,12 +108,12 @@ const updateBaseMeanAcc = async (id, meanAcc) => {
   }
 }
 
-const updateBasePosition = async (latitude, longitude, id) => {
+const updateBasePosition = async (latitude, longitude, altitude, id) => {
   try {
     const db = await connectToDatabase()
     const result = await db.collection(config.collections.base).findOneAndUpdate(
       { _id: ObjectId(id) },
-      { $set: { latitude, longitude } }
+      { $set: { latitude, longitude, altitude } }
     )
     // console.log(color.base, result)
   } catch (err) {
@@ -165,3 +191,5 @@ exports.getBaseById = getBaseById
 exports.updateBaseLastUpdate = updateBaseLastUpdate
 exports.updateBasePosition = updateBasePosition
 exports.updateBaseMeanAcc = updateBaseMeanAcc
+exports.getRelativeAltitudeByBaseId = getRelativeAltitudeByBaseId
+exports.setTrueAltitudeById = setTrueAltitudeById

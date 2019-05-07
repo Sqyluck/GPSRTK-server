@@ -57,7 +57,7 @@ const analyzeAndSaveData = async (rest, data, id) => {
     }
     var ggaInfo = dataInfo[1].split(',')
     if ((ggaInfo[2]) && (ggaInfo[4])) {
-      await updateBasePosition(getLonLatInDec(ggaInfo[2]), getLonLatInDec(ggaInfo[4]), id)
+      await updateBasePosition(getLonLatInDec(ggaInfo[2]), getLonLatInDec(ggaInfo[4]), ggaInfo[9], id)
     }
     return { result: -1 }
   }
