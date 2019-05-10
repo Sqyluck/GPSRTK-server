@@ -20,6 +20,7 @@ const addBaseToDatabase = async (latitude, longitude, altitude, macAddr) => {
         latitude,
         longitude,
         altitude,
+        trueAltitude: 0,
         date: Date.now(),
         lastUpdate: Date.now(),
         meanAcc: 0
@@ -47,7 +48,7 @@ const getallBasesFromDatabase = async () => {
   }
 }
 
-const setTrueAltitudeById = async (altitude, baseId) => {
+const setTrueAltitudeById = async (baseId, altitude) => {
   try {
     const db = await connectToDatabase()
     const result = await db.collection(config.collections.base).updateOne(
@@ -60,13 +61,25 @@ const setTrueAltitudeById = async (altitude, baseId) => {
   }
 }
 
+const getTrueAltitudeById = async (baseId) => {
+  try {
+    const db = await connectToDatabase()
+    const result = await db.collection(config.collections.base).findOne(
+      { _id: ObjectId(baseId) }
+    )
+    return result.trueAltitude
+  } catch (err) {
+    console.log(color.base, 'getBaseById: ' + err)
+  }
+}
+
 const getRelativeAltitudeByBaseId = async (altitude, baseId) => {
   try {
     const db = await connectToDatabase()
     const result = await db.collection(config.collections.base).findOne(
       { _id: baseId }
     )
-    return altitude - result.altitude + (result.trueAltitude ? result.trueAltitude : 0)
+    return altitude - result.altitude
   } catch (err) {
     console.log(color.base, 'getBaseById: ' + err)
   }
@@ -158,8 +171,8 @@ const getClosestBase = async (latitude, longitude) => {
           min.id = base._id
         }
       } else {
-        await deleteBaseFromDatabase(base._id)
-        await deleteCorrectionsbyBaseId(base._id)
+        // await deleteBaseFromDatabase(base._id)
+        // await deleteCorrectionsbyBaseId(base._id)
       }
     })
 
@@ -193,3 +206,4 @@ exports.updateBasePosition = updateBasePosition
 exports.updateBaseMeanAcc = updateBaseMeanAcc
 exports.getRelativeAltitudeByBaseId = getRelativeAltitudeByBaseId
 exports.setTrueAltitudeById = setTrueAltitudeById
+exports.getTrueAltitudeById = getTrueAltitudeById

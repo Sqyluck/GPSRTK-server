@@ -16,27 +16,23 @@ const {
 } = require('./analyzer/frameAnalyzer.js')
 
 const {
-  deleteAllRovers,
-  deleteRoverById,
   getallRoversFromDatabase,
   getRoverById
 } = require('./database/roverDatabase.js')
 
 const {
   getallBasesFromDatabase,
-  setTrueAltitudeById
+  setTrueAltitudeById,
+  getBaseById
 } = require('./database/baseDatabase.js')
 
 const {
   addRecord,
   getRecord,
   deleteRecord,
-  getAllRecords
+  getAllRecords,
+  createCsvFileByRecordId
 } = require('./database/recordDatabase.js')
-
-const {
-  getFramesFromDatabase
-} = require('./database/correctionsDatabase.js')
 
 const server = net.createServer({ allowHalfOpen: false })
 
@@ -44,13 +40,15 @@ const color = require('./color.js')
 
 const { logger } = require('./logger.js')
 
+const config = require('./config.json')
+
 /**
  * Start server
  */
 server.listen(6666, async () => {
   logger.info('----- ' + logDatetime() + ' ----- Server listening at ' + server.address().address + ':' + server.address().port)
   console.log('\x1b[33m', '----- ' + logDatetime() + ' ----- Server listening at ' + server.address().address + ':' + server.address().port)
-  console.log(await setTrueAltitudeById(20.21, '5cd00f4d4a65d09a3c81d708'))
+  // await createCsvFileByRecordId('5cd181f9fd8f9276c994336d')
 })
 
 /**
@@ -79,7 +77,7 @@ server.on('connection', async (socket) => {
       maxData += (msg.data.length / 2)
     })
     corrections.forEach((msg) => {
-      if (resultArray[nbMsg].length + msg.data.length < 2000) {
+      if (resultArray[nbMsg].length + msg.data.length < config.MAX_DATA_LEN * 2) {
         resultArray[nbMsg] += msg.data
         nbFrame++
         dataSize += msg.data.length / 2
@@ -107,17 +105,6 @@ server.on('connection', async (socket) => {
   }
 
   socket.on('data', async (data) => {
-    if (client.status) {
-      if ((data.toString().slice(8, 14) === '!BASE!') || (data.toString().slice(8, 15) === '!ROVER!')) {
-        console.log('!ok not received by client')
-        logger.info(' ' + logDatetime() + ' !ok not received by client ' + remoteAddress)
-        client.status = null
-      }
-      if (client.status === 'ROVER') {
-        client.msgId = data[0]
-        data = data.slice(1)
-      }
-    }
     const result = await analyzeData(client, data)
 
     if (result) {
@@ -125,9 +112,14 @@ server.on('connection', async (socket) => {
         client.nb_try = result.nb_try
       }
 
+      if (client.status === 'ROVER') {
+        if (client.recordId !== result.recordId) {
+          client.recordId = result.recordId
+        }
+      }
+
       // Send responses to clients
       if (Array.isArray(result.value)) {
-        client.msgId = data[0]
         sendData(result.value)
       } else {
         if (result.value !== '') {
@@ -141,7 +133,7 @@ server.on('connection', async (socket) => {
         client.connFailed = 0
         if (client.status === 'ROVER') {
           client.nb_try = 0
-          client.msgId = 0
+          client.recordId = null
           console.log(color.rover, '[' + client.status + '] : [' + logDatetime() + '] : Connected from : ' + remoteAddress)
           logger.info(' ' + logDatetime() + ' [' + client.status + '] : [' + logDatetime() + '] : Connected from : ' + remoteAddress)
         } else {
@@ -289,12 +281,38 @@ app.get('/allRecords', async (req, res) => {
 })
 
 app.post('/saveRecord', async (req, res) => {
-  console.log(req.body)
   if (await addRecord(req.body.name, req.body.data)) {
     res.send(true)
   } else {
     res.send(false)
   }
+})
+
+app.get('/setAltitude/:baseId/:newAltitude', async (req, res) => {
+  console.log(req.params.baseId + ' : ' + req.params.newAltitude)
+  console.log(await setTrueAltitudeById(req.params.baseId, Number(req.params.newAltitude)))
+  res.send(true)
+})
+
+app.get('/download/:recordId/:mode', async (req, res) => {
+  await createCsvFileByRecordId(req.params.recordId, req.params.mode)
+  console.log('download')
+  res.download(path.join(__dirname, '/public/data.' + req.params.mode), (req.params.recordId + '.' + req.params.mode), (err) => {
+    if (err) {
+      console.log('download failed: ' + err)
+    } else {
+      console.log('download successfull')
+    }
+  })
+})
+
+app.get('/load/:recordId', async (req, res) => {
+  const record = await getRecord(req.params.recordId)
+  const base = await getBaseById(record.baseId)
+  record.altitude = base.altitude
+  record.trueAltitude = base.trueAltitude
+  console.log(base)
+  res.send(record)
 })
 
 app.listen(3000, () => {

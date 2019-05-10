@@ -21,15 +21,50 @@ const {
   getStringStatus
 } = require('./roverAnalyzer.js')
 
+const {
+  createRecord,
+  addPostionToRecord
+} = require('./../database/recordDatabase.js')
+
 const color = require('./../color.js')
 
 const { logger } = require('./../logger.js')
 
 // const color = require('./../color.js')
 
-const { analyzeAndSaveData } = require('./baseAnalyzer.js')
+const {
+  analyzeAndSaveData,
+  analyzeBaseInfo
+} = require('./baseAnalyzer.js')
 
 const analyzeData = async (client, data) => {
+  if (data[0] === 0x21) {
+    let header = data.toString().split('!')[1]
+    switch (header) {
+      case 'CONN':
+        client.status = null
+        data = data.slice(6)
+        console.log('connexion frame received')
+        break
+      case 'START':
+        client.recordId = await createRecord(client.roverId, client.baseId)
+        console.log('start record received : ' + client.recordId)
+        data = data.slice(7)
+        break
+      case 'END':
+        client.recordId = null
+        console.log('------- stop record -------')
+        return {
+          record: null,
+          value: '!end'
+        }
+      case 'SVINACC':
+        data = data.slice(9)
+        const res = await analyzeBaseInfo(data, client.baseId)
+        return res
+    }
+  }
+
   // if connected as a base
   if (client.status === 'BASE') {
     const res = await base(client.rest, data, client.baseId)
@@ -37,7 +72,8 @@ const analyzeData = async (client, data) => {
 
   // if connected as a rover
   } else if (client.status === 'ROVER') {
-    const res = await rover(data, client.baseId, client.roverId, client.nb_try, client.msgId)
+    const res = await rover(data, client.baseId, client.roverId, client.nb_try, client.recordId)
+    res.recordId = client.recordId
     return res
 
   // if not connected
@@ -59,22 +95,16 @@ const analyzeData = async (client, data) => {
 const base = async (rest, data, id) => {
   const res = await analyzeAndSaveData(rest, data, id)
   if (res.result !== 0) {
-    if (res.result === -1) {
+    console.log(color.base, '<-- [' + res.result + '] Rtcm Received ' + (res.response ? '(end)' : '(+)'))
+    if (res.response) {
       return {
-        value: '!got'
+        value: '!got',
+        rest: res.rest
       }
     } else {
-      console.log(color.base, '<-- [' + res.result + '] Rtcm Received ' + (res.response ? '(end)' : '(+)'))
-      if (res.response) {
-        return {
-          value: '!got',
-          rest: res.rest
-        }
-      } else {
-        return {
-          value: '',
-          rest: res.rest
-        }
+      return {
+        value: '',
+        rest: res.rest
       }
     }
   } else {
@@ -82,15 +112,19 @@ const base = async (rest, data, id) => {
   }
 }
 
-const rover = async (data, baseId, roverId, nbTry, msgId) => {
+const rover = async (data, baseId, roverId, nbTry, recordId) => {
   const result = await analyzeAndGetData(data)
-  console.log(color.rover, '[ROVER] [' + msgId + '] Status: ' + result.status)
+  console.log(color.rover, '[ROVER] Status: ' + result.status)
   let threshold = 10
   if (result.result) {
     let altitude = await getRelativeAltitudeByBaseId(result.altitude, baseId)
-    console.log(result.altitude + 'm, => ' + altitude + 'm')
+    let latitude = getLonLatInDec(result.latitude)
+    let longitude = getLonLatInDec(result.longitude)
     if ((nbTry === threshold) || (result.status === 'Fixed RTK')) {
-      await updateRoverPositionById(getLonLatInDec(result.latitude), getLonLatInDec(result.longitude), altitude, result.status, roverId, true)
+      if (recordId) {
+        await addPostionToRecord(latitude, longitude, altitude, recordId)
+      }
+      await updateRoverPositionById(latitude, longitude, altitude, result.status, roverId, true)
       console.log(color.rover, '[ROVER]: Fix point found: ' + '{' + result.status + '}')
       logger.info('[ROVER]: Fix point found: ' + '{' + result.status + '}')
       return {
@@ -98,7 +132,7 @@ const rover = async (data, baseId, roverId, nbTry, msgId) => {
         nb_try: threshold + 1
       }
     } else if (nbTry < threshold) {
-      await updateRoverPositionById(getLonLatInDec(result.latitude), getLonLatInDec(result.longitude), altitude, result.status, roverId, false)
+      await updateRoverPositionById(latitude, longitude, altitude, result.status, roverId, false)
       const rtcmPacket = await getFramesFromDatabase(baseId)
       if (rtcmPacket.length === 0) {
         return {
@@ -119,7 +153,7 @@ const rover = async (data, baseId, roverId, nbTry, msgId) => {
     console.log(color.rover, '[ROVER] data received: ' + data.toString())
     logger.error('rover failed: ' + JSON.stringify(result))
     return {
-      value: []
+      value: '!ndat'
     }
   }
 }

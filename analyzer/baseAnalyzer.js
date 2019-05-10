@@ -31,6 +31,27 @@ const isCRCValid = (data) => {
   ((crc & 0xff) === data[data.length - 1]))
 }
 
+const analyzeBaseInfo = async (data, id) => {
+  await updateBaseLastUpdate(id)
+  var dataInfo = data.toString().split('$')
+  var meanAcc = data[0] << 24 | data[1] << 16 | data[2] << 8 | data[3]
+  meanAcc /= 10000
+  await updateBaseMeanAcc(id, meanAcc)
+  if (meanAcc > 1) {
+    console.log(color.base, '[BASE] SVIN meanAcc: ' + meanAcc + 'm')
+    logger.info('[BASE] SVIN meanAcc: ' + meanAcc + 'm')
+  } else {
+    meanAcc *= 100
+    console.log(color.base, '[BASE] SVIN meanAcc: ' + meanAcc + 'cm')
+    logger.info('[BASE] SVIN meanAcc: ' + meanAcc + 'cm')
+  }
+  var ggaInfo = dataInfo[1].split(',')
+  if ((ggaInfo[2]) && (ggaInfo[4]) && ggaInfo[9]) {
+    await updateBasePosition(getLonLatInDec(ggaInfo[2]), getLonLatInDec(ggaInfo[4]), ggaInfo[9], id)
+  }
+  return { value: '!got' }
+}
+
 const analyzeAndSaveData = async (rest, data, id) => {
   await updateBaseLastUpdate(id)
   var rtcmReceived = 0
@@ -39,29 +60,6 @@ const analyzeAndSaveData = async (rest, data, id) => {
   var complete = [rest, data]
   var responseOk = false
   data = Buffer.concat(complete)
-  if (data[0] === 0x21) {
-    var dataInfo = data.toString().split('$')
-    var svinInfo = dataInfo[0].split('!')
-    if (svinInfo[1] === 'svinacc') {
-      var meanAcc = data[9] << 24 | data[10] << 16 | data[11] << 8 | data[12]
-      meanAcc /= 10000
-      await updateBaseMeanAcc(id, meanAcc)
-      if (meanAcc > 1) {
-        console.log(color.base, '[BASE] SVIN meanAcc: ' + meanAcc + 'm')
-        logger.info('[BASE] SVIN meanAcc: ' + meanAcc + 'm')
-      } else {
-        meanAcc *= 100
-        console.log(color.base, '[BASE] SVIN meanAcc: ' + meanAcc + 'cm')
-        logger.info('[BASE] SVIN meanAcc: ' + meanAcc + 'cm')
-      }
-    }
-    var ggaInfo = dataInfo[1].split(',')
-    if ((ggaInfo[2]) && (ggaInfo[4])) {
-      await updateBasePosition(getLonLatInDec(ggaInfo[2]), getLonLatInDec(ggaInfo[4]), ggaInfo[9], id)
-    }
-    return { result: -1 }
-  }
-
   for (let i = 0; i < data.length; i++) {
     if (data[i] === 0xd3) {
       if (printReceivedData) {
@@ -127,3 +125,4 @@ const analyzeAndSaveData = async (rest, data, id) => {
 }
 
 exports.analyzeAndSaveData = analyzeAndSaveData
+exports.analyzeBaseInfo = analyzeBaseInfo

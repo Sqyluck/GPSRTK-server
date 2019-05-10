@@ -16,6 +16,10 @@
   margin: 5px;
 }
 
+.mainChoice {
+  padding: 10px 0px;
+}
+
 .unSelected {
   width: 80px;
   color: white;
@@ -59,6 +63,68 @@
   width: 700px;
 }
 
+.showMapT {
+  text-align: center;
+  width: 100px;
+  display: inline-block;
+  border-radius: 5px 0px 0px 5px;
+  color: white;
+  background-color: blue;
+  padding: 5px 10px;
+  margin: 0px 0px;
+}
+
+.showMapF {
+  text-align: center;
+  width: 100px;
+  display: inline-block;
+  border-radius: 5px 0px 0px 5px;
+  color: white;
+  background-color: grey;
+  padding: 5px 10px;
+  margin: 0px 0px;
+
+}
+
+.showRecT {
+  text-align: center;
+  width: 100px;
+  display: inline-block;
+  border-radius: 0px 5px 5px 0px;
+  color: white;
+  background-color: blue;
+  padding: 5px 10px;
+  margin: 0px 0px;
+}
+
+.showRecF {
+  text-align: center;
+  width: 100px;
+  display: inline-block;
+  border-radius: 0px 5px 5px 0px;
+  color: white;
+  background-color: grey;
+  padding: 5px 10px;
+  margin: 0px 0px;
+}
+
 p {
   margin: 0;
+}
+
+.recTable {
+  margin: 10px 0px;
+  border-collapse: collapse;
+  border: 1px solid black;
+}
+
+.tdRec {
+  border: 1px solid black;
+  width: 180px;
+  padding: 5px;
+}
+
+.tdInfo {
+  width: 250px;
+  padding: 5px 0px;
 }
