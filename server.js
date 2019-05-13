@@ -1,38 +1,16 @@
 const net = require('net')
-const path = require('path')
+const app = require('./app.js')
 
-const express = require('express')
-const bodyParser = require('body-parser')
-const app = express()
-
-// respond with 'hello world' when a GET request is made to the homepage
-//
-//
 const {
-  logDatetime,
   analyzeData,
-  changeBase,
-  prepareFrame
+  changeBase
 } = require('./analyzer/frameAnalyzer.js')
 
 const {
-  getallRoversFromDatabase,
-  getRoverById
-} = require('./database/roverDatabase.js')
-
-const {
-  getallBasesFromDatabase,
-  setTrueAltitudeById,
-  getBaseById
-} = require('./database/baseDatabase.js')
-
-const {
-  addRecord,
-  getRecord,
-  deleteRecord,
-  getAllRecords,
-  createCsvFileByRecordId
-} = require('./database/recordDatabase.js')
+  logDatetime,
+  prepareFrame,
+  prepareRTCMArray
+} = require('./analyzer/tools.js')
 
 const server = net.createServer({ allowHalfOpen: false })
 
@@ -40,15 +18,12 @@ const color = require('./color.js')
 
 const { logger } = require('./logger.js')
 
-const config = require('./config.json')
-
 /**
  * Start server
  */
 server.listen(6666, async () => {
   logger.info('----- ' + logDatetime() + ' ----- Server listening at ' + server.address().address + ':' + server.address().port)
   console.log('\x1b[33m', '----- ' + logDatetime() + ' ----- Server listening at ' + server.address().address + ':' + server.address().port)
-  // await createCsvFileByRecordId('5cd181f9fd8f9276c994336d')
 })
 
 /**
@@ -67,36 +42,10 @@ server.on('connection', async (socket) => {
   console.log('\x1b[33m', 'socket connected from ' + remoteAddress)
   logger.info('[Connexion] Socket connected from ' + remoteAddress)
 
-  var sendData = async (corrections) => {
-    var resultArray = ['']
-    let nbMsg = 0
-    let nbFrame = 0
-    let dataSize = 0
-    let maxData = 0
-    corrections.forEach((msg) => {
-      maxData += (msg.data.length / 2)
-    })
-    corrections.forEach((msg) => {
-      if (resultArray[nbMsg].length + msg.data.length < config.MAX_DATA_LEN * 2) {
-        resultArray[nbMsg] += msg.data
-        nbFrame++
-        dataSize += msg.data.length / 2
-      } else {
-        console.log(color.rover, '--> [' + nbFrame + '] send to rover, data[' + dataSize + '/' + maxData + ']')
-        resultArray.push(msg.data)
-        nbMsg++
-        nbFrame = 1
-        dataSize += msg.data.length / 2
-      }
-    })
-    resultArray[nbMsg] += '0021fe'
-    console.log(color.rover, '--> [' + nbFrame + '] send to rover, data[' + dataSize + '/' + maxData + ']')
-    sendPartialData(resultArray, 0)
-  }
-
   var sendPartialData = (array, index) => {
     if (index < array.length) {
       socket.write(prepareFrame(array[index]))
+      console.log(color.rover, ' --> [' + (index + 1) + '/' + array.length + '] Send RTCM (' + (array[index].length / 2) + ')')
       index++
       setTimeout(sendPartialData, 600, array, index)
     } else {
@@ -111,16 +60,16 @@ server.on('connection', async (socket) => {
       if (result.nb_try) {
         client.nb_try = result.nb_try
       }
-
-      if (client.status === 'ROVER') {
-        if (client.recordId !== result.recordId) {
-          client.recordId = result.recordId
-        }
+      if (result.recordId !== undefined) {
+        client.recordId = result.recordId
       }
 
       // Send responses to clients
       if (Array.isArray(result.value)) {
-        sendData(result.value)
+        if (client.ndat !== 0) {
+          client.ndat = 0
+        }
+        sendPartialData(prepareRTCMArray(result.value), 0)
       } else {
         if (result.value !== '') {
           socket.write(prepareFrame(result.value))
@@ -144,7 +93,7 @@ server.on('connection', async (socket) => {
       } else if (result.value === '!fix') {
         setTimeout(() => {
           client.nb_try = 0
-        }, 5000)
+        }, 0)
 
         // connexion refused
       } else if (result.value === '!nok') {
@@ -235,86 +184,4 @@ server.on('close', () => {
 process.on('SIGINT', async () => {
   console.log(color.FgYellow, 'Server closed')
   process.exit()
-})
-
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*')
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept')
-  res.header('Access-Control-Allow-Methods', 'POST, GET, PUT, DELETE, OPTIONS')
-  next()
-})
-
-app.use(express.static(path.join(__dirname, 'public')))
-app.use(bodyParser.json())
-app.use(express.json())
-
-app.get('/', async (req, res) => {
-  res.sendFile(path.join(__dirname, '/public/index.html'))
-})
-
-app.get('/allBases', async (req, res) => {
-  var bases = await getallBasesFromDatabase()
-  res.json(bases)
-})
-
-app.get('/allRovers', async (req, res) => {
-  var rovers = await getallRoversFromDatabase()
-  res.json(rovers)
-})
-
-app.get('/deleteRecord/:recordId', async (req, res) => {
-  if (await deleteRecord(req.params.recordId)) {
-    res.send(true)
-  } else {
-    res.send(false)
-  }
-})
-
-app.get('/getRover/:roverId', async (req, res) => {
-  const rover = await getRoverById(req.params.roverId)
-  res.json(rover)
-})
-
-app.get('/allRecords', async (req, res) => {
-  var records = await getAllRecords()
-  res.json(records)
-})
-
-app.post('/saveRecord', async (req, res) => {
-  if (await addRecord(req.body.name, req.body.data)) {
-    res.send(true)
-  } else {
-    res.send(false)
-  }
-})
-
-app.get('/setAltitude/:baseId/:newAltitude', async (req, res) => {
-  console.log(req.params.baseId + ' : ' + req.params.newAltitude)
-  console.log(await setTrueAltitudeById(req.params.baseId, Number(req.params.newAltitude)))
-  res.send(true)
-})
-
-app.get('/download/:recordId/:mode', async (req, res) => {
-  await createCsvFileByRecordId(req.params.recordId, req.params.mode)
-  console.log('download')
-  res.download(path.join(__dirname, '/public/data.' + req.params.mode), (req.params.recordId + '.' + req.params.mode), (err) => {
-    if (err) {
-      console.log('download failed: ' + err)
-    } else {
-      console.log('download successfull')
-    }
-  })
-})
-
-app.get('/load/:recordId', async (req, res) => {
-  const record = await getRecord(req.params.recordId)
-  const base = await getBaseById(record.baseId)
-  record.altitude = base.altitude
-  record.trueAltitude = base.trueAltitude
-  console.log(base)
-  res.send(record)
-})
-
-app.listen(3000, () => {
-  console.log('App listening on port 3000')
 })

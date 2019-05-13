@@ -20,7 +20,6 @@ const addBaseToDatabase = async (latitude, longitude, altitude, macAddr) => {
         latitude,
         longitude,
         altitude,
-        trueAltitude: 0,
         date: Date.now(),
         lastUpdate: Date.now(),
         meanAcc: 0
@@ -67,7 +66,7 @@ const getTrueAltitudeById = async (baseId) => {
     const result = await db.collection(config.collections.base).findOne(
       { _id: ObjectId(baseId) }
     )
-    return result.trueAltitude
+    return (result.trueAltitude ? result.trueAltitude : 0)
   } catch (err) {
     console.log(color.base, 'getBaseById: ' + err)
   }

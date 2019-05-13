@@ -22,10 +22,6 @@ app.controller('main', ['$scope', '$http', function ($scope, $http) {
   $scope.printRecord = null
   $scope.newAltitude = 0
 
-  $scope.records = [{ name: 'test1', _id: 55 },
-    { name: 'test2', _id: 56 },
-    { name: 'test3', _id: 57 }]
-
   $scope.select = () => {
     console.log($scope.recordSelect)
     deleteMarkers()
@@ -83,9 +79,7 @@ app.controller('main', ['$scope', '$http', function ($scope, $http) {
       }).then((data) => {
         let record = data.data
         $scope.printRecord = record
-        $scope.newAltitude = Number(record.trueAltitude)
-        console.log($scope.newAltitude)
-        console.log(record)
+        $scope.newAltitude = (record.trueAltitude ? Number(record.trueAltitude) : 0)
       })
     }
   }

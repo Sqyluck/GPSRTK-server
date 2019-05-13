@@ -1,4 +1,17 @@
-const analyzeAndGetData = async (data) => {
+const { updateRoverPositionById } = require('./../database/roverDatabase.js')
+const { addPostionToRecord } = require('./../database/recordDatabase.js')
+const { getFramesFromDatabase } = require('./../database/correctionsDatabase.js')
+const { getRelativeAltitudeByBaseId } = require('./../database/baseDatabase.js')
+const {
+  getLonLatInDec,
+  getStringStatus
+} = require('./tools.js')
+
+const color = require('./../color.js')
+
+const { logger } = require('./../logger.js')
+
+const getPositionAndStatus = async (data) => {
   if (NMEACrc(data)) {
     const positionData = data.toString().split(',')
     return {
@@ -17,22 +30,49 @@ const analyzeAndGetData = async (data) => {
   }
 }
 
-const getStringStatus = (status) => {
-  switch (Number(status)) {
-    case 0:
-      return 'invalid'
-    case 1:
-      return '2D/3D'
-    case 2:
-      return 'DGNSS'
-    case 4:
-      return 'Fixed RTK'
-    case 5:
-      return 'Float RTK'
-    case 6:
-      return 'Dead Reckoning'
-    default:
-      return 'Unknow'
+const analyzeRoverRequest = async (data, baseId, roverId, nbTry, recordId) => {
+  const result = await getPositionAndStatus(data)
+  console.log(color.rover, '[ROVER] Status: ' + result.status)
+  let threshold = 10
+  if (result.result) {
+    let altitude = await getRelativeAltitudeByBaseId(result.altitude, baseId)
+    let latitude = getLonLatInDec(result.latitude)
+    let longitude = getLonLatInDec(result.longitude)
+    if ((nbTry === threshold) || (result.status === 'Fixed RTK')) {
+      if (recordId) {
+        await addPostionToRecord(latitude, longitude, altitude, recordId)
+      }
+      await updateRoverPositionById(latitude, longitude, altitude, result.status, roverId, true)
+      console.log(color.rover, '[ROVER]: Fix point found: ' + '{' + result.status + '}')
+      logger.info('[ROVER]: Fix point found: ' + '{' + result.status + '}')
+      return {
+        value: '!fix',
+        nb_try: threshold + 1
+      }
+    } else if (nbTry < threshold) {
+      await updateRoverPositionById(latitude, longitude, altitude, result.status, roverId, false)
+      const rtcmPacket = await getFramesFromDatabase(baseId)
+      if (rtcmPacket.length === 0) {
+        return {
+          value: '!ndat',
+          nb_try: nbTry
+        }
+      } else {
+        return {
+          value: rtcmPacket,
+          nb_try: ++nbTry
+        }
+      }
+    } else {
+      console.log(color.rover, 'rover +1: ' + nbTry)
+      logger.error('rover +1: ' + nbTry)
+    }
+  } else {
+    // console.log(color.rover, '[ROVER] data received: ' + data.toString())
+    logger.error('rover failed: ' + JSON.stringify(result))
+    return {
+      value: '!ndat'
+    }
   }
 }
 
@@ -44,5 +84,4 @@ const NMEACrc = (nmea) => {
   return crc.toString(16).toUpperCase() === nmea.toString().slice(nmea.length - 4, nmea.length - 2)
 }
 
-exports.analyzeAndGetData = analyzeAndGetData
-exports.getStringStatus = getStringStatus
+exports.analyzeRoverRequest = analyzeRoverRequest

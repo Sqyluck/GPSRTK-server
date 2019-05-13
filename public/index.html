@@ -29,6 +29,12 @@
 					<table>
 						<tr>
 							<td class="tdInfo">
+								Base:
+							</td><td class="tdInfo">
+								{{printRecord.macAddr}}m
+							</td>
+						</tr><tr>
+							<td class="tdInfo">
 								Altitude de la base mesurée:
 							</td><td class="tdInfo">
 								{{printRecord.altitude}}m
@@ -37,7 +43,7 @@
 							<td class="tdInfo">
 								Altitude réélle de la base:
 							</td><td class="tdInfo">
-								{{printRecord.trueAltitude}}m
+								{{printRecord.trueAltitude ? printRecord.trueAltitude : 0}}m
 							</td>
 						</tr><tr>
 							<td class="tdInfo">

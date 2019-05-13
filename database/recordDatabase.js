@@ -51,7 +51,6 @@ const addPostionToRecord = async (lat, lng, alt, recordId) => {
 
 const createCsvFileByRecordId = async (recordId, mode) => {
   try {
-    const csv = true
     let stream = null
     if (mode === 'csv') {
       stream = fs.createWriteStream(path.join(__dirname, '/../public/data.csv'))
@@ -75,7 +74,7 @@ const createCsvFileByRecordId = async (recordId, mode) => {
       })
     } else if (mode === 'txt') {
       await asyncForEach(result.data, (pos) => {
-        str += pos.lng + ' ' + pos.lat + ' ' + Math.round((pos.alt + altitude) * 1000) / 1000 + '\n'
+        str += pos.lng + ' ' + pos.lat + ' ' + Math.round((pos.alt + altitude) * 1000) / 1000 + ' \r\n'
       })
     }
     stream.write(str)
