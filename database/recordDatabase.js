@@ -37,7 +37,7 @@ const createRecord = async (roverId, baseId) => {
 const addPostionToRecord = async (lat, lng, alt, recordId) => {
   try {
     const db = await connectToDatabase()
-    let pos = { lat, lng, alt }
+    let pos = { lat, lng, alt, date: Date.now() }
     console.log(pos)
     const result = await db.collection(config.collections.record).findOneAndUpdate(
       { _id: recordId },

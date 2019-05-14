@@ -17,40 +17,23 @@ app.controller('main', ['$scope', '$http', function ($scope, $http) {
   $scope.offset = false
   $scope.latOffset = 0
   $scope.lngOffset = 0
-  $scope.altitude = 0
   $scope.showMap = false
   $scope.printRecord = null
   $scope.newAltitude = 0
+  $scope.currentDate = Date.now()
+  $scope.recordSelection = true
+  $scope.filterDate = 2
 
-  $scope.select = () => {
-    console.log($scope.recordSelect)
-    deleteMarkers()
-    $scope.records.forEach((record) => {
-      if (record._id === $scope.recordSelect) {
-        console.log(record)
-        $scope.currentRecord = record.data
-        console.log($scope.currentRecord)
-        loadRecord()
-      }
-    })
-    $scope.recordSelect = null
+  const timer = () => {
+    $scope.currentDate = Date.now()
+    setTimeout(timer, 60000)
   }
-
-  $scope.delete = () => {
-    console.log($scope.recordDelete)
-    $http({
-      method: 'GET',
-      url: $scope.ipAddress + '/deleteRecord/' + $scope.recordDelete
-    }).then((response) => {
-      console.log(response)
-      $scope.recordDelete = null
-      getRecords()
-    })
-  }
+  setTimeout(timer, 60000)
 
   $scope.newRecord = () => {
     deleteMarkers()
   }
+
 
   var getRecords = () => {
     $http({
@@ -58,35 +41,42 @@ app.controller('main', ['$scope', '$http', function ($scope, $http) {
       url: $scope.ipAddress + '/allRecords'
     }).then((records) => {
       $scope.records = records.data
-      $scope.records.forEach((record) => {
-        let date = new Date(record.date)
-        record.dateStr = date.toLocaleDateString('fr-FR') + ' ' +
-         date.getHours().toString().padStart(2, '0') + ':' +
-         date.getMinutes().toString().padStart(2, '0') + ':' +
-         date.getSeconds().toString().padStart(2, '0')
-        console.log(record.dateStr)
-      })
       console.log($scope.records)
     })
   }
 
-  $scope.loadRecord = () => {
-    if ($scope.recordDownload) {
-      console.log($scope.ipAddress + '/load/' + $scope.recordDownload)
+  $scope.loadRecord = (recId) => {
+    if (recId) {
+      $scope.recordId = recId
+      $scope.recordSelection = false
+    }
+    if ($scope.recordId) {
+      console.log($scope.ipAddress + '/load/' + $scope.recordId)
       $http({
         method: 'GET',
-        url: $scope.ipAddress + '/load/' + $scope.recordDownload
+        url: $scope.ipAddress + '/load/' + $scope.recordId
       }).then((data) => {
         let record = data.data
         $scope.printRecord = record
+        let macAddr = ''
+        for (let i = 0; i < 8; i++) {
+          if (i !== 0) {
+            macAddr += ':'
+          }
+          macAddr += record.macAddr[i].toString(16).padStart(2, '0')
+        }
+        $scope.printRecord.macAddr = macAddr
+        $scope.printRecord.altitude = Number(record.altitude)
+        $scope.printRecord.trueAltitude = (record.trueAltitude ? Number(record.trueAltitude) : 0)
         $scope.newAltitude = (record.trueAltitude ? Number(record.trueAltitude) : 0)
+        showRecordOnMap()
       })
     }
   }
 
   $scope.downloadRecord = (mode) => {
-    if ($scope.recordDownload) {
-      window.open($scope.ipAddress + '/download/' + $scope.recordDownload + '/' + mode)
+    if ($scope.recordId) {
+      window.open($scope.ipAddress + '/download/' + $scope.recordId + '/' + mode)
     }
   }
 
@@ -154,24 +144,24 @@ app.controller('main', ['$scope', '$http', function ($scope, $http) {
           if ($scope.currentRecord.length > 0) {
             if ($scope.currentRecord[$scope.currentRecord.length - 1].lat !== rover.latitude) {
               console.log('push length > 0')
-              $scope.currentRecord.push({ altitude: rover.altitude - $scope.altitude, lat: rover.latitude, lon: rover.longitude, status: rover.status })
+              $scope.currentRecord.push({ altitude: rover.altitude, lat: rover.latitude, lon: rover.longitude, status: rover.status })
               $scope.markers.push(new google.maps.Marker({
                 position: { lat: rover.latitude + $scope.latOffset, lng: rover.longitude + $scope.lngOffset },
                 map: map,
                 icon: chooseRoverIcon(rover.status),
                 clickable: true,
-                title: '{' + rover.altitude - $scope.altitude + 'm, ' + rover.latitude + $scope.latOffset + ', ' + rover.longitude + $scope.lngOffset + '}'
+                title: '{' + rover.altitude + 'm, ' + rover.latitude + $scope.latOffset + ', ' + rover.longitude + $scope.lngOffset + '}'
               }))
             }
           } else {
             console.log('push length == 0')
-            $scope.currentRecord.push({ altitude: rover.altitude - $scope.altitude, lat: rover.latitude, lon: rover.longitude, status: rover.status })
+            $scope.currentRecord.push({ altitude: rover.altitude, lat: rover.latitude, lon: rover.longitude, status: rover.status })
             $scope.markers.push(new google.maps.Marker({
               position: { lat: rover.latitude + $scope.latOffset, lng: rover.longitude + $scope.lngOffset },
               map: map,
               icon: chooseRoverIcon(rover.status),
               clickable: true,
-              title: '{' + rover.altitude - $scope.altitude + 'm, ' + rover.latitude + $scope.latOffset + ', ' + rover.longitude + $scope.lngOffset + '}'
+              title: '{' + rover.altitude + 'm, ' + rover.latitude + $scope.latOffset + ', ' + rover.longitude + $scope.lngOffset + '}'
             }))
           }
         } else {
@@ -206,6 +196,18 @@ app.controller('main', ['$scope', '$http', function ($scope, $http) {
     $scope.showPrecisePoint()
   }
 
+  $scope.timeToString = (time) => {
+    let date = new Date(time)
+    return date.toLocaleDateString('fr-FR') + ' ' +
+     date.getHours().toString().padStart(2, '0') + ':' +
+     date.getMinutes().toString().padStart(2, '0') + ':' +
+     date.getSeconds().toString().padStart(2, '0')
+  }
+
+  $scope.hoursToMilli = (hour) => {
+    return (Number(hour) * 3600 * 1000)
+  }
+
   var deleteMarkers = () => {
     while ($scope.markers.length !== 0) {
       $scope.markers[0].setMap(null)
@@ -216,16 +218,16 @@ app.controller('main', ['$scope', '$http', function ($scope, $http) {
     }
   }
 
-  var loadRecord = () => {
-    getRecords()
-    $scope.currentRecord.forEach((record) => {
-      console.log('lat: ' + (record.lat + $scope.latOffset) + ',  lng: ' + (record.lng + $scope.lngOffset))
+  var showRecordOnMap = () => {
+    deleteMarkers()
+    // TODO: set map center on record[0]
+    $scope.printRecord.data.forEach((record) => {
       $scope.markers.push(new google.maps.Marker({
         position: { lat: record.lat + $scope.latOffset, lng: record.lng + $scope.lngOffset },
         map: map,
-        icon: chooseRoverIcon(record.status),
+        icon: (record.status ? chooseRoverIcon(record.status) : roverIconVert),
         clickable: true,
-        title: '{' + (record.altitude - $scope.altitude) + 'm, ' + record.lat + $scope.latOffset + ', ' + record.lng + $scope.lngOffset + '}'
+        title: $scope.timeToString(record.date) + ' : ' + (Math.round(record.alt * 1000) / 1000) + 'm => ' + (Math.round((record.alt + $scope.printRecord.trueAltitude) * 1000) / 1000) + 'm'
       }))
     })
   }
@@ -237,7 +239,6 @@ app.controller('main', ['$scope', '$http', function ($scope, $http) {
       url: $scope.ipAddress + '/allBases'
     }).then((data) => {
       let bases = data.data
-      $scope.altitude = Number(bases[0].altitude)
       bases.forEach((base, index) => {
         if (($scope.bases[index].position.lat !== base.latitude) || ($scope.bases[index].position.lng !== base.longitude)) {
           $scope.bases[index].setMap(null)
@@ -246,7 +247,7 @@ app.controller('main', ['$scope', '$http', function ($scope, $http) {
             map: map,
             icon: baseIcon,
             clickable: true,
-            title: '{' + (base.altitude - $scope.altitude) + 'm, ' + base.latitude + ', ' + base.longitude + '}'
+            title: '{' + (base.trueAltitude) + 'm, ' + base.latitude + ', ' + base.longitude + '}'
           })
           change = true
         }
@@ -266,11 +267,6 @@ app.controller('main', ['$scope', '$http', function ($scope, $http) {
       let bases = data.data
       console.log(bases[0])
       initMap(bases[0].latitude, bases[0].longitude)
-      const p = new google.maps.Marker({
-        position: { lat: 50.63252475, lng: 3.02071804 },
-        map: map,
-        icon: roverIconVert
-      })
       bases.forEach((base) => {
         console.log(base)
         $scope.bases.push(new google.maps.Marker({

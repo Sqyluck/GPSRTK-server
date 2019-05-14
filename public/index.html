@@ -10,28 +10,40 @@
 	</head>
 	<body>
 		<div ng-controller="main" class="main">
+			<a ng-show="recordSelection" ng-click="recordSelection = false">V Choose record</a>
+			<a ng-show="!recordSelection" ng-click="recordSelection = true">> Choose record</a>
+				<div ng-show = "recordSelection">
+				<a ng-class="[filterDate === 0 ? 'valid' : 'invalid', 'filter']" ng-click="filterDate = 0">+ de 48h
+				</a><a ng-class="[filterDate === 1 ? 'valid' : 'invalid', 'filter']" ng-click="filterDate = 1">de 48 a 24h
+				</a><a ng-class="[filterDate === 2 ? 'valid' : 'invalid', 'filter']" ng-click="filterDate = 2">- de 24h</a>
+				<div ng-repeat="record in records">
+					<p ng-class="'listRecord'" ng-show="(record.date >= currentDate - hoursToMilli(24)) && filterDate === 2" ng-click="loadRecord(record._id)">{{timeToString(record.date)}}</p>
+					<p ng-class="'listRecord'" ng-show="(record.date < currentDate - hoursToMilli(24)) && (record.date >= currentDate - hoursToMilli(48) && filterDate === 1)" ng-click="loadRecord(record._id)">{{timeToString(record.date)}}</p>
+					<p ng-class="'listRecord'" ng-show="((record.date < currentDate - hoursToMilli(48)) && filterDate === 0)" ng-click="loadRecord(record._id)">{{timeToString(record.date)}}</p>
+				</div>
+			</div>
 			<div class="mainChoice">
-				<a ng-class="showMap ? 'showMapT' : 'showMapF'" ng-click="showMap = true">MAP</a><a ng-class="!showMap ? 'showRecT' : 'showRecF'" ng-click="showMap = false">RECORD</a>
+				<!--<p>
+					Load record:
+					<select name="repeatSelect" id="repeatSelect" ng-model="recordId">
+						<option value="{{null}}"></option>
+						<option ng-repeat="record in records" value="{{record._id}}">{{ timeToString(record.date) }}</option>
+					</select>
+					<a ng-class="recordId ? 'selected' : 'unSelected'" ng-click="loadRecord()">LOAD<a/>
+					</p> -->
+				<a ng-class="[showMap ? 'valid' : 'invalid', 'showMap']" ng-click="showMap = true">MAP</a><a ng-class="[!showMap ? 'valid' : 'invalid', 'showRec']" ng-click="showMap = false">RECORD</a>
 			</div>
 
 
 			<!-- RECORD -->
 			<div ng-show="!showMap">
-				<p>
-					Load record:
-					<select name="repeatSelect" id="repeatSelect" ng-model="recordDownload">
-						<option value="{{null}}"></option>
-						<option ng-repeat="record in records" value="{{record._id}}">{{ record.dateStr }}</option>
-					</select>
-					<a ng-class="recordDownload ? 'selected' : 'unSelected'" ng-click="loadRecord()">LOAD<a/>
-				</p>
 				<div ng-show="printRecord">
 					<table>
 						<tr>
 							<td class="tdInfo">
-								Base:
+								Base de référence:
 							</td><td class="tdInfo">
-								{{printRecord.macAddr}}m
+								{{printRecord.macAddr}}
 							</td>
 						</tr><tr>
 							<td class="tdInfo">
@@ -43,7 +55,7 @@
 							<td class="tdInfo">
 								Altitude réélle de la base:
 							</td><td class="tdInfo">
-								{{printRecord.trueAltitude ? printRecord.trueAltitude : 0}}m
+								{{printRecord.trueAltitude}}m
 							</td>
 						</tr><tr>
 							<td class="tdInfo">
@@ -63,6 +75,8 @@
 							</th><th class="tdRec">
 								Altitude relative (m)
 							</th><th class="tdRec">
+								Altitude mesurée (m)
+							</th><th class="tdRec">
 								Altitude calculée (m)
 							</th>
 						</tr>
@@ -72,14 +86,16 @@
 							</td><td class="tdRec">
 								{{position.lng | number:7}}
 							</td><td class="tdRec">
-								{{position.alt | number:2}}
+								{{position.alt | number:3}}
 							</td><td class="tdRec">
-								{{(position.alt + newAltitude) | number:2}}
+								{{(position.alt + printRecord.altitude) | number:3}}
+							</td><td class="tdRec">
+								{{(position.alt + newAltitude) | number:3}}
 							</td>
 						</tr>
 					</table>
-					<a ng-class="recordDownload ? 'selected' : 'unSelected'" ng-click="downloadRecord('csv')">DOWNLOAD CSV<a/>
-					<a ng-class="recordDownload ? 'selected' : 'unSelected'" ng-click="downloadRecord('txt')">DOWNLOAD TXT<a/>
+					<a ng-class="recordId ? 'selected' : 'unSelected'" ng-click="downloadRecord('csv')">DOWNLOAD CSV<a/>
+					<a ng-class="recordId ? 'selected' : 'unSelected'" ng-click="downloadRecord('txt')">DOWNLOAD TXT<a/>
 				</div>
 			</div>
 
@@ -88,43 +104,25 @@
 				<table>
 					<tr>
 						<td class="td1">
-				      <p> Select record:
-				        <select name="repeatSelect" id="repeatSelect" ng-model="recordSelect">
+			      	<p> Select rover:
+				        <select ng-show="!roverId" name="repeatSelect" id="repeatSelect" ng-model="roverSelect">
 									<option value="{{null}}"></option>
-				          <option ng-repeat="record in records" value="{{record._id}}">{{record.dateStr}}</option>
+				          <option ng-repeat="rover in rovers" value="{{rover._id}}">{{rover.macAddr.toString()}}</option>
 				        </select>
-				        <a  ng-class="recordSelect ? 'selected' : 'unSelected'" ng-click="select()">LOAD<a/>
-							</p>
-						</td><td class="td2">
-				      <p> Delete record:
-			        <select name="repeatSelect" id="repeatSelect" ng-model="recordDelete">
-								<option value="{{null}}"></option>
-			          <option ng-repeat="record in records" value="{{record._id}}">{{record.dateStr}}</option>
-			        </select>
-							<a ng-class="recordDelete ? 'selected' : 'unSelected'" ng-click="delete()">DELETE<a/>
-			      </p>
-					</td>
-				</tr><tr>
-					<td class="td1">
-			      <p> Select rover:
-			        <select ng-show="!roverId" name="repeatSelect" id="repeatSelect" ng-model="roverSelect">
-								<option value="{{null}}"></option>
-			          <option ng-repeat="rover in rovers" value="{{rover._id}}">{{rover.macAddr.toString()}}</option>
-			        </select>
-							<a ng-show="roverId">{{macAddr}}</a>
-			        <a ng-show="!roverId" ng-class="roverSelect ? 'selected' : 'unSelected'" ng-click="followRover()"> START <a/>
-							<a ng-show="roverId" ng-class="'stop'" ng-click="followRover()"> STOP <a/>
+								<a ng-show="roverId">{{macAddr}}</a>
+				        <a ng-show="!roverId" ng-class="roverSelect ? 'selected' : 'unSelected'" ng-click="followRover()"> START <a/>
+								<a ng-show="roverId" ng-class="'stop'" ng-click="followRover()"> STOP <a/>
 							</p>
 						</td>
 					</tr><tr>
 						<td class="td1">
 				      <a ng-class="'stop'" ng-click="newRecord()"> CLEAR MAP </a>
-						</td><td class="td2">
+						</td><!--<td class="td2">
 							Offset:   lat: <input type="text" ng-model="lat">
 							lng: <input type="text" ng-model="lng">
 							<a ng-class="lat !== '' && lng !== '' && lat != null && lng != null ? 'selected' : 'unSelected'" ng-click="setOffset()"> SET </a>
 							<a ng-class="'stop'" ng-show="latOffset !== 0 && lngOffset !== 0" ng-click="clearOffset()"> CLEAR </a>
-						</td>
+						</td>-->
 					</tr>
 				</table>
 

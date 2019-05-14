@@ -68,8 +68,33 @@ const getStringStatus = (status) => {
   }
 }
 
+const ln = (val) => {
+  return (Math.log(val) / Math.log(2))
+}
+
+const latLngToLambert1 = (lat, lng) => {
+  console.log('{lat: ' + lat + ', lng: ' + lng + '}')
+  lat = lat * Math.PI / 180
+  lng = lng * Math.PI / 180
+  console.log('{lat: ' + lat + ', lng: ' + lng + '}')
+  const Xs = 600000
+  const Ys = 5657616.674
+  const k0 = 2.33722916667 * Math.PI / 180
+  // const k0 = 0.99987734
+  const n = 0.7604059656
+  const e = 0.08248325676
+  const C = 11603796.98
+  const L = (1 / 2) * ln((1 + Math.sin(lat)) / (1 - Math.sin(lat))) - (e / 2) * ln((1 + e * Math.sin(lat)) / (1 - e * Math.sin(lat)))
+  const R = C * Math.exp(-(n * L))
+  const W = n * (lng - k0)
+  const res = { X: (Xs + R * Math.sin(W)), Y: (Ys - R * Math.cos(W)) }
+  console.log(res)
+  return { X: (Xs + R * Math.sin(W)), Y: (Ys - R * Math.cos(W)) }
+}
+
 exports.prepareRTCMArray = prepareRTCMArray
 exports.prepareFrame = prepareFrame
 exports.logDatetime = logDatetime
 exports.getLonLatInDec = getLonLatInDec
 exports.getStringStatus = getStringStatus
+exports.latLngToLambert1 = latLngToLambert1

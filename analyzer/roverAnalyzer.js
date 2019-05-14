@@ -4,7 +4,8 @@ const { getFramesFromDatabase } = require('./../database/correctionsDatabase.js'
 const { getRelativeAltitudeByBaseId } = require('./../database/baseDatabase.js')
 const {
   getLonLatInDec,
-  getStringStatus
+  getStringStatus,
+  latLngToLambert1
 } = require('./tools.js')
 
 const color = require('./../color.js')
@@ -38,16 +39,26 @@ const analyzeRoverRequest = async (data, baseId, roverId, nbTry, recordId) => {
     let altitude = await getRelativeAltitudeByBaseId(result.altitude, baseId)
     let latitude = getLonLatInDec(result.latitude)
     let longitude = getLonLatInDec(result.longitude)
+    console.log(latLngToLambert1(latitude, longitude))
     if ((nbTry === threshold) || (result.status === 'Fixed RTK')) {
-      if (recordId) {
-        await addPostionToRecord(latitude, longitude, altitude, recordId)
-      }
-      await updateRoverPositionById(latitude, longitude, altitude, result.status, roverId, true)
-      console.log(color.rover, '[ROVER]: Fix point found: ' + '{' + result.status + '}')
-      logger.info('[ROVER]: Fix point found: ' + '{' + result.status + '}')
-      return {
-        value: '!fix',
-        nb_try: threshold + 1
+      if (result.status === 'Fixed RTK') {
+        if (recordId) {
+          await addPostionToRecord(latitude, longitude, altitude, recordId)
+        }
+        await updateRoverPositionById(latitude, longitude, altitude, result.status, roverId, true)
+        console.log(color.rover, '[ROVER]: Fix point found: ' + '{' + result.status + '}')
+        logger.info('[ROVER]: Fix point found: ' + '{' + result.status + '}')
+        return {
+          value: '!fix',
+          nb_try: threshold + 1
+        }
+      } else {
+        console.log(color.rover, '[ROVER]: Can\'t find fix point {' + result.status + '}')
+        logger.info('[ROVER]: Can\'t find fix point {' + result.status + '}')
+        return {
+          value: '!nfix',
+          nb_try: threshold + 1
+        }
       }
     } else if (nbTry < threshold) {
       await updateRoverPositionById(latitude, longitude, altitude, result.status, roverId, false)

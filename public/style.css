@@ -63,49 +63,49 @@
   width: 700px;
 }
 
-.showMapT {
+.valid {
+  background-color: blue;
+}
+
+.invalid {
+  background-color: grey;
+}
+
+.listRecord {
+  text-align: left;
+  width: 200px
+  padding: 5px 10px;
+  margin: 10px 0px;
+}
+
+.filter {
+  text-align: center;
+  width: 100px;
+  display: inline-block;
+  color: white;
+  padding: 5px 10px;
+  margin: 10px 0px;
+}
+
+.showMap {
   text-align: center;
   width: 100px;
   display: inline-block;
   border-radius: 5px 0px 0px 5px;
   color: white;
-  background-color: blue;
   padding: 5px 10px;
-  margin: 0px 0px;
-}
-
-.showMapF {
-  text-align: center;
-  width: 100px;
-  display: inline-block;
-  border-radius: 5px 0px 0px 5px;
-  color: white;
-  background-color: grey;
-  padding: 5px 10px;
-  margin: 0px 0px;
+  margin: 10px 0px;
 
 }
 
-.showRecT {
+.showRec {
   text-align: center;
   width: 100px;
   display: inline-block;
   border-radius: 0px 5px 5px 0px;
   color: white;
-  background-color: blue;
   padding: 5px 10px;
-  margin: 0px 0px;
-}
-
-.showRecF {
-  text-align: center;
-  width: 100px;
-  display: inline-block;
-  border-radius: 0px 5px 5px 0px;
-  color: white;
-  background-color: grey;
-  padding: 5px 10px;
-  margin: 0px 0px;
+  margin: 10px 0px;
 }
 
 p {

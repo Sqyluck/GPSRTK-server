@@ -90,7 +90,7 @@ server.on('connection', async (socket) => {
           console.log(color.base, '[' + client.status + '] : [' + logDatetime() + '] : Connected')
           logger.info(' ' + logDatetime() + ' [' + client.status + '] : [' + logDatetime() + '] : Connected from : ' + remoteAddress)
         }
-      } else if (result.value === '!fix') {
+      } else if ((result.value === '!fix') || (result.value === '!nfix')) {
         setTimeout(() => {
           client.nb_try = 0
         }, 0)
