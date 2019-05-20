@@ -41,7 +41,7 @@ const analyzeData = async (client, data) => {
           value: '!start'
         }
       case 'END':
-      console.log(color.FgMagenta, '---------- end record -----------')
+        console.log(color.FgMagenta, '---------- end record -----------')
         client.recordId = null
         return {
           recordId: null,

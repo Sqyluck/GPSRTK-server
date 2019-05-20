@@ -98,9 +98,9 @@ app.get('/download/:recordId/:mode', async (req, res) => {
 
 app.get('/load/:recordId', async (req, res) => {
   console.log('load')
-  console.log(latLngToLambert1(50.6318168, 3.0195333))
   const record = await getRecord(req.params.recordId)
   const base = await getBaseById(record.baseId)
+  // console.log(latLngToLambert1(record.data[0].lat, record.data[0].lng))
   record.altitude = base.altitude
   record.macAddr = base.macAddr
   record.trueAltitude = base.trueAltitude
