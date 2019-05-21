@@ -25,8 +25,9 @@ const {
 } = require('./database/recordDatabase.js')
 
 const {
-  latLngToLambert1
+  coordToLambert
 } = require('./analyzer/tools.js')
+
 /*
     WebApp
  */
@@ -97,13 +98,16 @@ app.get('/download/:recordId/:mode', async (req, res) => {
 })
 
 app.get('/load/:recordId', async (req, res) => {
-  console.log('load')
   const record = await getRecord(req.params.recordId)
   const base = await getBaseById(record.baseId)
-  // console.log(latLngToLambert1(record.data[0].lat, record.data[0].lng))
   record.altitude = base.altitude
   record.macAddr = base.macAddr
   record.trueAltitude = base.trueAltitude
+  record.data.forEach((pos) => {
+    let lambert = coordToLambert('Lambert93', pos.lat, pos.lng)
+    pos.X = lambert.X
+    pos.Y = lambert.Y
+  })
   res.send(record)
 })
 

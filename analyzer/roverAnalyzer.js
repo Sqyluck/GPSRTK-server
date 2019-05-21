@@ -5,7 +5,6 @@ const { getRelativeAltitudeByBaseId } = require('./../database/baseDatabase.js')
 const {
   getLonLatInDec,
   getStringStatus,
-  latLngToLambert1
 } = require('./tools.js')
 
 const color = require('./../color.js')
@@ -39,7 +38,6 @@ const analyzeRoverRequest = async (data, baseId, roverId, nbTry, recordId) => {
     let altitude = await getRelativeAltitudeByBaseId(result.altitude, baseId)
     let latitude = getLonLatInDec(result.latitude)
     let longitude = getLonLatInDec(result.longitude)
-    console.log(latLngToLambert1(latitude, longitude))
     if ((nbTry === threshold) || (result.status === 'Fixed RTK')) {
       if (result.status === 'Fixed RTK') {
         if (recordId) {
