@@ -1,0 +1,237 @@
+.font {
+  font-family: arial;
+  margin: 0px;
+  padding: 0px;
+}
+
+.header {
+  background-color: grey;
+  height: 60px;
+}
+
+.view {
+  margin: 10px;
+  padding: 0px;
+}
+
+.chooseOption {
+  text-align: center;
+  width: 100px;
+  height: 100%;
+  line-height: 60px;
+  display: inline-block;
+  margin: 0px 10px;
+  padding: 0px 10px;
+  color: white;
+}
+
+.valid {
+  background-color: blue;
+}
+
+.invalid {
+  background-color: grey;
+}
+
+#map{ /* la carte DOIT avoir une hauteur sinon elle n'apparaît pas */
+  height:75vh;
+  width: 95%;
+  margin: 5px;
+}
+
+#baseMap { /* la carte DOIT avoir une hauteur sinon elle n'apparaît pas */
+  height: 80%;
+  width: 55%;
+  margin: 5px;
+  float: left;
+}
+
+#baseInfo {
+  height: 80%;
+  width: 40%;
+  margin: 5px;
+  float: left;
+}
+
+#roverMap {
+  height: 80%;
+  width: 90%;
+  margin: 5px;
+}
+
+.cornerButton {
+  width: 80px;
+  color: white;
+  text-align: left;
+  padding : 5px;
+  display inline-block;
+  float: right;
+  border-radius: 5px;
+  margin: 5px;
+}
+
+.bgGreen {
+  background-color: green;
+}
+
+.bgRed {
+  background-color: red;
+}
+
+.listRecord {
+  text-align: left;
+  width: 200px
+  padding: 5px 10px;
+  margin: 10px 0px;
+}
+
+.filter {
+  text-align: center;
+  width: 100px;
+  display: inline-block;
+  color: white;
+  padding: 5px 10px;
+  margin: 10px 0px;
+}
+
+.recTable {
+  margin: 10px 0px;
+  border-collapse: collapse;
+  border: 1px solid black;
+}
+
+.scrollTable {
+  width: 594px;
+}
+
+.scrollTable thead {
+  display: block;
+}
+
+.scrollTable tbody {
+  height: 450px;
+  display: block;
+  overflow: auto;
+}
+
+.trChoice:hover{
+  background-color: lightgrey;
+}
+
+.tdRec {
+  border: 1px solid black;
+  width: 180px;
+  padding: 5px;
+}
+
+.tdInfo {
+  width: 250px;
+  padding: 5px 0px;
+}
+
+.unSelected {
+  display: inline-block;
+  text-align: center;
+  width: 120px;
+  height: auto;
+  color: white;
+  background-color: grey;
+  border-radius: 5px;
+  padding: 1px 10px;
+  margin: 2px;
+}
+
+.selected {
+  display: inline-block;
+  text-align: center;
+  width: 120px;
+  height: auto;
+  color: white;
+  background-color: green;
+  border-radius: 5px;
+  padding: 1px 10px;
+  margin: 2px;
+}
+
+.download {
+  display: block;
+  text-align: center;
+  width: 200px;
+  color: white;
+  background-color: green;
+  border-radius: 5px;
+  padding: 1px 10px;
+  margin: 2px;
+}
+
+.quit {
+  display: inline-block;
+  text-align: center;
+  width: 120px;
+  color: white;
+  background-color: red;
+  border-radius: 5px;
+  padding: 1px 10px;
+  margin: 2px;
+}
+
+.showMap {
+  text-align: center;
+  width: 100px;
+  display: inline-block;
+  border-radius: 5px 0px 0px 5px;
+  color: white;
+  padding: 5px 10px;
+  margin: 10px 0px;
+
+}
+
+.showRec {
+  text-align: center;
+  width: 100px;
+  display: inline-block;
+  border-radius: 0px 5px 5px 0px;
+  color: white;
+  padding: 5px 10px;
+  margin: 10px 0px;
+}
+
+.green {
+  color: green;
+}
+
+.red {
+  color: red;
+}
+
+.base-view {
+  background-color: whitesmoke;
+  padding-top: 50px 10px;
+  margin: 0 auto;
+  width: 95%;
+  padding: 10px;
+}
+
+.record-view {
+  background-color: whitesmoke;
+  padding: 10px;
+  margin: 0 auto;
+  width: 95%;
+  padding: 10px;
+}
+
+.rover-view {
+  background-color: whitesmoke;
+  padding: 10px;
+  margin: 0 auto;
+  width: 95%;
+  padding: 10px;
+}
+
+.firstChoice {
+  border-radius: 7px 0px 0px 7px;
+}
+
+.lastChoice {
+  border-radius: 0px 7px 7px 0px;
+}

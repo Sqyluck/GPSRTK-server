@@ -4,7 +4,7 @@ const { getFramesFromDatabase } = require('./../database/correctionsDatabase.js'
 const { getRelativeAltitudeByBaseId } = require('./../database/baseDatabase.js')
 const {
   getLonLatInDec,
-  getStringStatus,
+  getStringStatus
 } = require('./tools.js')
 
 const color = require('./../color.js')
@@ -39,11 +39,11 @@ const analyzeRoverRequest = async (data, baseId, roverId, nbTry, recordId) => {
     let latitude = getLonLatInDec(result.latitude)
     let longitude = getLonLatInDec(result.longitude)
     if ((nbTry === threshold) || (result.status === 'Fixed RTK')) {
+      await updateRoverPositionById(latitude, longitude, altitude, result.status, roverId, true)
       if (result.status === 'Fixed RTK') {
         if (recordId) {
           await addPostionToRecord(latitude, longitude, altitude, recordId)
         }
-        await updateRoverPositionById(latitude, longitude, altitude, result.status, roverId, true)
         console.log(color.rover, '[ROVER]: Fix point found: ' + '{' + result.status + '}')
         logger.info('[ROVER]: Fix point found: ' + '{' + result.status + '}')
         return {

@@ -63,18 +63,6 @@ const getallRoversFromDatabase = async () => {
   }
 }
 
-const getRoverFromDatabase = async (roverId) => {
-  try {
-    const db = await connectToDatabase()
-    const result = await db.collection(config.collections.rover).findOne(
-      { _id: roverId }
-    )
-    return result
-  } catch (err) {
-    console.log(color.rover, 'getallRoversFromDatabase: ' + err)
-  }
-}
-
 const deleteRoverById = async (roverId) => {
   try {
     const db = await connectToDatabase()
@@ -116,5 +104,4 @@ exports.deleteRoverById = deleteRoverById
 exports.deleteAllRovers = deleteAllRovers
 exports.getallRoversFromDatabase = getallRoversFromDatabase
 exports.setRoverFixed = setRoverFixed
-exports.getRoverFromDatabase = getRoverFromDatabase
 exports.getRoverById = getRoverById

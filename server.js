@@ -1,5 +1,5 @@
 const net = require('net')
-const app = require('./app.js')
+const { app, addSocket, delSocket } = require('./app.js')
 
 const {
   analyzeData,
@@ -55,7 +55,6 @@ server.on('connection', async (socket) => {
 
   socket.on('data', async (data) => {
     const result = await analyzeData(client, data)
-
     if (result) {
       if (result.nb_try) {
         client.nb_try = result.nb_try
@@ -81,11 +80,13 @@ server.on('connection', async (socket) => {
         Object.assign(client, result.socket)
         client.connFailed = 0
         if (client.status === 'ROVER') {
+          addSocket(client.roverId.toString(), socket)
           client.nb_try = 0
           client.recordId = null
           console.log(color.rover, '[' + client.status + '] : [' + logDatetime() + '] : Connected from : ' + remoteAddress)
           logger.info(' ' + logDatetime() + ' [' + client.status + '] : [' + logDatetime() + '] : Connected from : ' + remoteAddress)
         } else {
+          addSocket(client.baseId.toString(), socket)
           client.rest = Buffer.from('')
           console.log(color.base, '[' + client.status + '] : [' + logDatetime() + '] : Connected')
           logger.info(' ' + logDatetime() + ' [' + client.status + '] : [' + logDatetime() + '] : Connected from : ' + remoteAddress)
@@ -163,6 +164,11 @@ server.on('connection', async (socket) => {
   })
 
   socket.on('close', () => {
+    if (client.status === 'ROVER') {
+      delSocket(client.roverId)
+    } else {
+      delSocket(client.baseId)
+    }
     console.log(client.status === 'ROVER' ? color.rover : color.base, '----- ' + logDatetime() + ' ----- Close connection from ' + remoteAddress)
     logger.info('---------' + logDatetime() + ' Connection Closed from ' + remoteAddress + '-----------')
   })

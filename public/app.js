@@ -12,6 +12,7 @@ app.controller('main', ['$scope', '$http', function ($scope, $http) {
   $scope.records = []
   $scope.rovers = []
   $scope.bases = []
+  $scope.sockets = []
   $scope.roverId = null
   $scope.tempMarker = null
   $scope.offset = false
@@ -45,6 +46,29 @@ app.controller('main', ['$scope', '$http', function ($scope, $http) {
     })
   }
 
+  $scope.getSockets = () => {
+    $http({
+      method: 'GET',
+      url: $scope.ipAddress + '/allSockets'
+    }).then((data) => {
+      $scope.sockets = []
+      data.data.forEach((socket) => {
+        $scope.sockets.push({ id: socket, acc: null })
+      })
+      console.log($scope.sockets)
+    })
+  }
+
+  $scope.changeBaseAcc = (socket) => {
+    console.log(socket)
+    $http({
+      method: 'GET',
+      url: $scope.ipAddress + '/changeAcc/' + socket.id.key + '/' + (Number(socket.acc) * 10000)
+    }).then((res) => {
+      // socket.acc = null
+    })
+  }
+
   $scope.loadRecord = (recId) => {
     if (recId) {
       $scope.recordId = recId
@@ -58,14 +82,6 @@ app.controller('main', ['$scope', '$http', function ($scope, $http) {
       }).then((data) => {
         let record = data.data
         $scope.printRecord = record
-        let macAddr = ''
-        for (let i = 0; i < 8; i++) {
-          if (i !== 0) {
-            macAddr += ':'
-          }
-          macAddr += record.macAddr[i].toString(16).padStart(2, '0')
-        }
-        $scope.printRecord.macAddr = macAddr
         $scope.printRecord.altitude = Number(record.altitude)
         $scope.printRecord.trueAltitude = (record.trueAltitude ? Number(record.trueAltitude) : 0)
         $scope.newAltitude = (record.trueAltitude ? Number(record.trueAltitude) : 0)

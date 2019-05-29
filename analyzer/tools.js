@@ -84,9 +84,21 @@ const coordToLambert = (proj, lat, lng) => {
   return { X: x, Y: y }
 }
 
+const macAddrToString = (macAddr) => {
+  let macAddrStr = ''
+  for (let i = 0; i < 8; i++) {
+    if (i !== 0) {
+      macAddrStr += ':'
+    }
+    macAddrStr += macAddr[i].toString(16).padStart(2, '0')
+  }
+  return macAddrStr
+}
+
 exports.prepareRTCMArray = prepareRTCMArray
 exports.prepareFrame = prepareFrame
 exports.logDatetime = logDatetime
 exports.getLonLatInDec = getLonLatInDec
 exports.getStringStatus = getStringStatus
 exports.coordToLambert = coordToLambert
+exports.macAddrToString = macAddrToString

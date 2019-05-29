@@ -11,12 +11,15 @@ const {
 
 const {
   addRoverToDatabase,
-  getRoverFromDatabase
+  getRoverById
 } = require('./../database/roverDatabase.js')
 
 const { analyzeRoverRequest } = require('./roverAnalyzer.js')
 
-const { createRecord } = require('./../database/recordDatabase.js')
+const {
+  createRecord,
+  deleteEmptyRecords
+} = require('./../database/recordDatabase.js')
 
 const {
   getLonLatInDec,
@@ -43,6 +46,7 @@ const analyzeData = async (client, data) => {
       case 'END':
         console.log(color.FgMagenta, '---------- end record -----------')
         client.recordId = null
+        await deleteEmptyRecords()
         return {
           recordId: null,
           value: '!end'
@@ -85,6 +89,7 @@ const checkConnectionFrame = async (frame) => {
     var macAddr = new Uint8Array(8)
     for (var i = 0; i < 8; i++) {
       macAddr[i] = frame[i]
+      frame[i] = 0x00
     }
     const connectionData = frame.toString().split('!')
     const positionData = connectionData[2].split(',')
@@ -94,13 +99,14 @@ const checkConnectionFrame = async (frame) => {
 
     const altitude = Number(positionData[9])
     const result = {
-      status: connectionData[1],
-      connected: (((connectionData[1] === 'BASE') || (connectionData[1] === 'ROVER')) && (Number(status) !== 0))
+      status: connectionData[1] === 'ROVER' ? 'ROVER' : 'BASE',
+      connected: (((connectionData[1].slice(0, 4) === 'BASE') || (connectionData[1] === 'ROVER')) && (Number(status) !== 0))
     }
     if (!result.connected) {
       return result
-    } else if (connectionData[1] === 'BASE') {
-      result.baseId = await addBaseToDatabase(latitude, longitude, altitude, macAddr)
+    } else if (connectionData[1].slice(0, 4) === 'BASE') {
+      const accuracy = Number(connectionData[1].slice(4))
+      result.baseId = await addBaseToDatabase(latitude, longitude, altitude, macAddr, accuracy)
       return result
     } else if (connectionData[1] === 'ROVER') {
       result.baseId = await getClosestBase(latitude, longitude)
@@ -115,7 +121,7 @@ const checkConnectionFrame = async (frame) => {
 
 const changeBase = async (roverId) => {
   try {
-    var rover = await getRoverFromDatabase(roverId)
+    var rover = await getRoverById(roverId)
     var baseId = await getClosestBase(rover.latitude, rover.longitude)
     return baseId
   } catch (err) {

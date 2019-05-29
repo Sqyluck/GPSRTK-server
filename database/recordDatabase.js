@@ -109,6 +109,19 @@ const deleteRecord = async (id) => {
   }
 }
 
+const deleteEmptyRecords = async () => {
+  try {
+    const db = await connectToDatabase()
+    const result = await db.collection(config.collections.record).deleteMany({
+      data: { $size: 0 }
+    })
+    console.log(result.results)
+    return result.result.n !== 0
+  } catch (err) {
+    console.log('deleteEmptyRecords: ' + err)
+  }
+}
+
 const getAllRecords = async () => {
   try {
     const db = await connectToDatabase()
@@ -126,3 +139,4 @@ exports.getAllRecords = getAllRecords
 exports.createRecord = createRecord
 exports.addPostionToRecord = addPostionToRecord
 exports.createCsvFileByRecordId = createCsvFileByRecordId
+exports.deleteEmptyRecords = deleteEmptyRecords
