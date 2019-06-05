@@ -1,0 +1,25 @@
+<section class="rover-view">
+  <div ng-show="!roverChosen">
+    <div ng-class="['cornerButton', 'bgGreen']" ng-click=actualize()>
+      Refresh <i class="fas fa-sync"></i>
+    </div>
+    <h3>Choisir un rover</h3>
+    <table class="recTable">
+      <tr>
+        <th class="tdRec"> Adresse MAC</th>
+      </tr>
+      <tr class="trChoice" ng-repeat="rover in allRovers" ng-click="loadRover(rover)">
+          <td class="tdRec">{{rover.macAddr}}</td>
+      </tr>
+    </table>
+  </div>
+  <div ng-show="roverChosen">
+    <div ng-class="['cornerButton', 'bgRed']" ng-click=backToList()>
+      Retour <i class="fas fa-chevron-right"></i>
+    </div>
+    <div ng-class="['cornerButton', 'bgRed']" ng-click=clearMap()>
+      Clear <i class="fas fa-chevron-right"></i>
+    </div>
+    <div id="roverMap"></div>
+  </div>
+</section>

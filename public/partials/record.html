@@ -1,0 +1,116 @@
+<section class="record-view">
+  <div ng-show="!recordChosen">
+    <div ng-class="['cornerButton', 'bgGreen']" ng-click=actualize()>
+      Refresh <i class="fas fa-sync"></i>
+    </div>
+    <h3 style="margin-left:50px;"> Choix d'un enregistrement</h3>
+    <p>Filtrer par rover:
+    <select ng-model="filterRover">
+      <option value="">Tous les rovers</option>
+      <option ng-repeat="rover in allRovers" value="{{rover._id}}">{{rover.macAddr}}</option>
+    </select>
+    </p>
+    <a ng-class="[filterDate === 0 ? 'valid' : 'invalid', 'filter', 'firstChoice']" ng-click="filterDate = 0">+ de 48h
+    </a><a ng-class="[filterDate === 1 ? 'valid' : 'invalid', 'filter']" ng-click="filterDate = 1">de 48 a 24h
+    </a><a ng-class="[filterDate === 2 ? 'valid' : 'invalid', 'filter', 'lastChoice']" ng-click="filterDate = 2">- de 24h</a>
+    <p style="margin-left:20px;" ng-show="nbFiltered() === 0"> Aucun resultat trouvé </p>
+    <table style="margin-left:20px;" ng-class="['recTable', 'scrollTable']" ng-show="nbFiltered() !== 0">
+      <thead>
+        <tr>
+          <th class="tdRec">Date</th><th class="tdRec">mac adresse du rover</th><th class="tdRec">Nombre de points</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="trChoice" ng-repeat="record in allRecords" ng-show=(filter(record)) ng-click="loadRecord(record._id)">
+          <td class="tdRec">{{timeToString(record.date)}}</td><td class="tdRec">{{record.roverMacAddr}}</td><td class="tdRec">{{record.dataLen}}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div ng-show="recordChosen">
+    <div ng-class="['cornerButton', 'bgRed']" ng-click=backToList()>
+      Retour <i class="fas fa-chevron-right"></i>
+    </div>
+    <div ng-class="['cornerButton', 'bgGreen']" ng-click=actualize()>
+      Refresh <i class="fas fa-sync"></i>
+    </div>
+    <a ng-class="[showMap ? 'valid' : 'invalid', 'showMap']" ng-click="showRecordOnMap(true)">MAP</a><a ng-class="[!showMap ? 'valid' : 'invalid', 'showRec']" ng-click="showRecordOnMap(false)">RECORD</a>
+    <div ng-show="showMap" id="map">
+    </div>
+    <div ng-show="!showMap">
+      <table>
+        <tr>
+          <td class="tdInfo">
+            Date et heure:
+          </td><td class="tdInfo">
+            {{timeToString(recordChosen.date)}}
+          </td>
+        </tr><tr>
+          <td class="tdInfo">
+            Base de référence:
+          </td><td class="tdInfo">
+            {{recordChosen.macAddr}}
+          </td>
+        </tr><tr>
+          <td class="tdInfo">
+            Altitude de la base mesurée:
+          </td><td class="tdInfo">
+            {{recordChosen.altitude}}m
+          </td>
+        </tr><tr>
+          <td class="tdInfo">
+            Altitude réélle de la base:
+          </td><td class="tdInfo">
+            {{recordChosen.trueAltitude}}m
+          </td>
+        </tr><tr>
+          <td class="tdInfo">
+            Nouvelle altitude (m):
+          </td><td class="tdInfo">
+            <input type="number" step="0.001" ng-model="newAltitude"/>
+            <a ng-class="newAltitude != null ? 'selected' : 'unSelected'" ng-click="saveAltitude()" value="newAltitude">SAVE<a/>
+          </td>
+        </tr>
+      </table>
+      <table class="recTable">
+        <tr>
+          <th class="tdRec">
+            Latitude
+          </th><th class="tdRec">
+            Longitude
+          </th><th class="tdRec">
+            X
+          </th><th class="tdRec">
+            Y
+          </th><th class="tdRec">
+            Altitude relative (m)
+          </th><th class="tdRec">
+            Altitude mesurée (m)
+          </th><th class="tdRec">
+            Altitude calculée (m)
+          </th>
+        </tr>
+        <tr ng-repeat="position in recordChosen.data">
+          <td class="tdRec">
+            {{position.lat | number:7}}
+          </td><td class="tdRec">
+            {{position.lng | number:7}}
+          </td><td class="tdRec">
+            {{position.X | number:3}}
+          </td><td class="tdRec">
+            {{position.Y | number:3}}
+          </td><td class="tdRec">
+            {{position.alt | number:3}}
+          </td><td class="tdRec">
+            {{(position.alt + recordChosen.altitude) | number:3}}
+          </td><td class="tdRec">
+            {{(position.alt + newAltitude) | number:3}}
+          </td>
+        </tr>
+      </table>
+      <a class="download" ng-click="downloadRecord('csv')">DOWNLOAD CSV<a/>
+      <br/>
+    </div>
+  </div>
+</section>

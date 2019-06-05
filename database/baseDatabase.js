@@ -6,11 +6,9 @@ const {
   ObjectId
 } = require('./database.js')
 
-const { deleteCorrectionsbyBaseId } = require('./correctionsDatabase.js')
-
 const color = require('./../color.js')
 
-const addBaseToDatabase = async (latitude, longitude, altitude, macAddr) => {
+const addBaseToDatabase = async (latitude, longitude, altitude, macAddr, acc) => {
   try {
     const db = await connectToDatabase()
     const result = await db.collection(config.collections.base).findOneAndUpdate(
@@ -22,7 +20,7 @@ const addBaseToDatabase = async (latitude, longitude, altitude, macAddr) => {
         altitude,
         date: Date.now(),
         lastUpdate: Date.now(),
-        meanAcc: 0
+        acc
       } },
       { upsert: true })
     if (result.lastErrorObject.updatedExisting) {
@@ -47,14 +45,13 @@ const getallBasesFromDatabase = async () => {
   }
 }
 
-const setTrueAltitudeById = async (altitude, baseId) => {
+const getTrueAltitudeById = async (baseId) => {
   try {
     const db = await connectToDatabase()
-    const result = await db.collection(config.collections.base).updateOne(
-      { _id: ObjectId(baseId) },
-      { $set: { trueAltitude: altitude } }
+    const result = await db.collection(config.collections.base).findOne(
+      { _id: ObjectId(baseId) }
     )
-    return result.result.n != null
+    return (result.trueAltitude ? result.trueAltitude : 0)
   } catch (err) {
     console.log(color.base, 'getBaseById: ' + err)
   }
@@ -66,7 +63,7 @@ const getRelativeAltitudeByBaseId = async (altitude, baseId) => {
     const result = await db.collection(config.collections.base).findOne(
       { _id: baseId }
     )
-    return altitude - result.altitude + (result.trueAltitude ? result.trueAltitude : 0)
+    return altitude - result.altitude
   } catch (err) {
     console.log(color.base, 'getBaseById: ' + err)
   }
@@ -76,11 +73,20 @@ const getBaseById = async (id) => {
   try {
     const db = await connectToDatabase()
     const result = await db.collection(config.collections.base).findOne(
-      { _id: id }
+      { _id: ObjectId(id) }
     )
     return result
   } catch (err) {
     console.log(color.base, 'getBaseById: ' + err)
+  }
+}
+
+const getBaseMacAddress = async (id) => {
+  try {
+    const base = await getBaseById(id)
+    return base.macAddr
+  } catch (err) {
+    console.log('getBaseMacAddress: ' + err)
   }
 }
 
@@ -121,6 +127,32 @@ const updateBasePosition = async (latitude, longitude, altitude, id) => {
   }
 }
 
+const setTrueAltitudeById = async (baseId, altitude) => {
+  try {
+    const db = await connectToDatabase()
+    const result = await db.collection(config.collections.base).updateOne(
+      { _id: ObjectId(baseId) },
+      { $set: { trueAltitude: altitude } }
+    )
+    return result.result.n != null
+  } catch (err) {
+    console.log(color.base, 'getBaseById: ' + err)
+  }
+}
+
+const setNewAccuracyOnBase = async (baseId, acc) =>  {
+  try {
+    const db = await connectToDatabase()
+    const result = await db.collection(config.collections.base).updateOne(
+      { _id: ObjectId(baseId) },
+      { $set: { acc } }
+    )
+    return result.result.n != null
+  } catch (err) {
+    console.log(color.base, 'setNewAccuracyOnBase: ' + err)
+  }
+}
+
 const deleteBaseFromDatabase = async (id) => {
   try {
     const db = await connectToDatabase()
@@ -158,8 +190,8 @@ const getClosestBase = async (latitude, longitude) => {
           min.id = base._id
         }
       } else {
-        await deleteBaseFromDatabase(base._id)
-        await deleteCorrectionsbyBaseId(base._id)
+        // await deleteBaseFromDatabase(base._id)
+        // await deleteCorrectionsbyBaseId(base._id)
       }
     })
 
@@ -193,3 +225,6 @@ exports.updateBasePosition = updateBasePosition
 exports.updateBaseMeanAcc = updateBaseMeanAcc
 exports.getRelativeAltitudeByBaseId = getRelativeAltitudeByBaseId
 exports.setTrueAltitudeById = setTrueAltitudeById
+exports.getTrueAltitudeById = getTrueAltitudeById
+exports.getBaseMacAddress = getBaseMacAddress
+exports.setNewAccuracyOnBase = setNewAccuracyOnBase

@@ -1,43 +1,71 @@
 const {
-  getFramesFromDatabase,
-  deleteCorrectionsbyBaseId
-} = require('./../database/correctionsDatabase.js')
-
-const {
   addBaseToDatabase,
-  deleteBaseFromDatabase,
   getClosestBase,
   getRelativeAltitudeByBaseId
 } = require('./../database/baseDatabase.js')
 
 const {
-  addRoverToDatabase,
-  updateRoverPositionById,
-  getRoverFromDatabase
-} = require('./../database/roverDatabase.js')
+  analyzeBaseInfo,
+  analyzeBaseData
+} = require('./baseAnalyzer.js')
 
 const {
-  analyzeAndGetData,
+  addRoverToDatabase,
+  getRoverById
+} = require('./../database/roverDatabase.js')
+
+const { analyzeRoverRequest } = require('./roverAnalyzer.js')
+
+const {
+  createRecord,
+  deleteEmptyRecords
+} = require('./../database/recordDatabase.js')
+
+const {
+  getLonLatInDec,
   getStringStatus
-} = require('./roverAnalyzer.js')
+} = require('./tools.js')
 
 const color = require('./../color.js')
 
-const { logger } = require('./../logger.js')
-
-// const color = require('./../color.js')
-
-const { analyzeAndSaveData } = require('./baseAnalyzer.js')
-
 const analyzeData = async (client, data) => {
+  if (data[0] === 0x21) {
+    let header = data.toString().split('!')[1]
+    switch (header) {
+      case 'CONN':
+        client.status = null
+        data = data.slice(6)
+        break
+      case 'START':
+        console.log(color.FgMagenta, '---------- start record -----------')
+        let recordId = await createRecord(client.roverId, client.baseId)
+        return {
+          recordId: recordId,
+          value: '!start'
+        }
+      case 'END':
+        console.log(color.FgMagenta, '---------- end record -----------')
+        client.recordId = null
+        await deleteEmptyRecords()
+        return {
+          recordId: null,
+          value: '!end'
+        }
+      case 'SVINACC':
+        data = data.slice(9)
+        const res = await analyzeBaseInfo(data, client.baseId, client.macAddr)
+        return res
+    }
+  }
+
   // if connected as a base
   if (client.status === 'BASE') {
-    const res = await base(client.rest, data, client.baseId)
+    const res = await analyzeBaseData(client.rest, data, client.baseId)
     return res
 
   // if connected as a rover
   } else if (client.status === 'ROVER') {
-    const res = await rover(data, client.baseId, client.roverId, client.nb_try, client.msgId)
+    const res = await analyzeRoverRequest(data, client.baseId, client.roverId, client.nb_try, client.recordId, client.macAddr)
     return res
 
   // if not connected
@@ -56,83 +84,12 @@ const analyzeData = async (client, data) => {
   }
 }
 
-const base = async (rest, data, id) => {
-  const res = await analyzeAndSaveData(rest, data, id)
-  if (res.result !== 0) {
-    if (res.result === -1) {
-      return {
-        value: '!got'
-      }
-    } else {
-      console.log(color.base, '<-- [' + res.result + '] Rtcm Received ' + (res.response ? '(end)' : '(+)'))
-      if (res.response) {
-        return {
-          value: '!got',
-          rest: res.rest
-        }
-      } else {
-        return {
-          value: '',
-          rest: res.rest
-        }
-      }
-    }
-  } else {
-    return false
-  }
-}
-
-const rover = async (data, baseId, roverId, nbTry, msgId) => {
-  const result = await analyzeAndGetData(data)
-  console.log(color.rover, '[ROVER] [' + msgId + '] Status: ' + result.status)
-  let threshold = 10
-  if (result.result) {
-    let altitude = await getRelativeAltitudeByBaseId(result.altitude, baseId)
-    console.log(result.altitude + 'm, => ' + altitude + 'm')
-    if ((nbTry === threshold) || (result.status === 'Fixed RTK')) {
-      await updateRoverPositionById(getLonLatInDec(result.latitude), getLonLatInDec(result.longitude), altitude, result.status, roverId, true)
-      console.log(color.rover, '[ROVER]: Fix point found: ' + '{' + result.status + '}')
-      logger.info('[ROVER]: Fix point found: ' + '{' + result.status + '}')
-      return {
-        value: '!fix',
-        nb_try: threshold + 1
-      }
-    } else if (nbTry < threshold) {
-      await updateRoverPositionById(getLonLatInDec(result.latitude), getLonLatInDec(result.longitude), altitude, result.status, roverId, false)
-      const rtcmPacket = await getFramesFromDatabase(baseId)
-      if (rtcmPacket.length === 0) {
-        return {
-          value: '!ndat',
-          nb_try: nbTry
-        }
-      } else {
-        return {
-          value: rtcmPacket,
-          nb_try: ++nbTry
-        }
-      }
-    } else {
-      console.log(color.rover, 'rover +1: ' + nbTry)
-      logger.error('rover +1: ' + nbTry)
-    }
-  } else {
-    console.log(color.rover, '[ROVER] data received: ' + data.toString())
-    logger.error('rover failed: ' + JSON.stringify(result))
-    return {
-      value: []
-    }
-  }
-}
-
-const getLonLatInDec = (value) => {
-  return Math.round((Math.floor(Number(value) / 100) + (Number(value) % 100) / 60) * 10000000) / 10000000
-}
-
 const checkConnectionFrame = async (frame) => {
   if (frame != null) {
     var macAddr = new Uint8Array(8)
     for (var i = 0; i < 8; i++) {
       macAddr[i] = frame[i]
+      frame[i] = 0x00
     }
     const connectionData = frame.toString().split('!')
     const positionData = connectionData[2].split(',')
@@ -142,13 +99,15 @@ const checkConnectionFrame = async (frame) => {
 
     const altitude = Number(positionData[9])
     const result = {
-      status: connectionData[1],
-      connected: (((connectionData[1] === 'BASE') || (connectionData[1] === 'ROVER')) && (Number(status) !== 0))
+      status: connectionData[1] === 'ROVER' ? 'ROVER' : 'BASE',
+      macAddr: macAddr,
+      connected: (((connectionData[1].slice(0, 4) === 'BASE') || (connectionData[1] === 'ROVER')) && (Number(status) !== 0))
     }
     if (!result.connected) {
       return result
-    } else if (connectionData[1] === 'BASE') {
-      result.baseId = await addBaseToDatabase(latitude, longitude, altitude, macAddr)
+    } else if (connectionData[1].slice(0, 4) === 'BASE') {
+      const accuracy = Number(connectionData[1].slice(4))
+      result.baseId = await addBaseToDatabase(latitude, longitude, altitude, macAddr, accuracy)
       return result
     } else if (connectionData[1] === 'ROVER') {
       result.baseId = await getClosestBase(latitude, longitude)
@@ -161,18 +120,9 @@ const checkConnectionFrame = async (frame) => {
   }
 }
 
-const logDatetime = () => {
-  return new Date().toLocaleString('fr-FR', { timeZone: 'Europe/Paris' })
-}
-
-const deleteBase = async (id) => {
-  await deleteCorrectionsbyBaseId(id)
-  await deleteBaseFromDatabase(id)
-}
-
 const changeBase = async (roverId) => {
   try {
-    var rover = await getRoverFromDatabase(roverId)
+    var rover = await getRoverById(roverId)
     var baseId = await getClosestBase(rover.latitude, rover.longitude)
     return baseId
   } catch (err) {
@@ -180,24 +130,7 @@ const changeBase = async (roverId) => {
   }
 }
 
-const prepareFrame = (frame, type) => {
-  let size = null
-  let str = ''
-  if (frame[0] === '!') {
-    size = new Uint8Array([frame.length << 8, frame.length])
-    str = size[0].toString(16).padStart(2, '0') + size[1].toString(16).padStart(2, '0') + '21' + Buffer.from(frame.slice(1)).toString('hex')
-  } else {
-    size = new Uint8Array([((frame.length / 2) + 1) >> 8, (frame.length / 2) + 1])
-    str = size[0].toString(16).padStart(2, '0') + size[1].toString(16).padStart(2, '0') + '21' + frame
-  }
-  return Buffer.from(str, 'hex')
-}
-
-exports.analyzeAndSaveData = analyzeAndSaveData
 exports.checkConnectionFrame = checkConnectionFrame
-exports.logDatetime = logDatetime
-exports.deleteBase = deleteBase
 exports.analyzeData = analyzeData
 exports.changeBase = changeBase
 exports.getLonLatInDec = getLonLatInDec
-exports.prepareFrame = prepareFrame

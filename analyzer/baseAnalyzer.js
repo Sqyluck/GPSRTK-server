@@ -1,11 +1,10 @@
 const color = require('./../color.js')
-
 const config = require('./config')
-
 const { logger } = require('./../logger.js')
-
-const polycrc = require('polycrc')
-const crc24q = polycrc.crc(24, 0x1864CFB, 0x0000, 0x0000, false)
+const {
+  getLonLatInDec,
+  macAddrToString
+} = require('./tools.js')
 
 const { updateFrameByType } = require('./../database/correctionsDatabase.js')
 const {
@@ -14,14 +13,31 @@ const {
   updateBasePosition
 } = require('./../database/baseDatabase.js')
 
+const polycrc = require('polycrc')
+const crc24q = polycrc.crc(24, 0x1864CFB, 0x0000, 0x0000, false)
+
 const isTypeValid = (msgtype) => {
   return config.messageType.find(type => type === msgtype) != null
 }
 
-const printReceivedData = false
-
-const getLonLatInDec = (value) => {
-  return Math.round((Math.floor(Number(value) / 100) + (Number(value) % 100) / 60) * 10000000) / 10000000
+const analyzeBaseData = async (rest, data, id) => {
+  const res = await analyzeAndSaveData(rest, data, id)
+  if (res.result !== 0) {
+    console.log(color.base, '<-- [' + res.result + '] Rtcm Received ' + (res.response ? '(end)' : '(+)'))
+    if (res.response) {
+      return {
+        value: '!got',
+        rest: res.rest
+      }
+    } else {
+      return {
+        value: '',
+        rest: res.rest
+      }
+    }
+  } else {
+    return false
+  }
 }
 
 const isCRCValid = (data) => {
@@ -31,45 +47,35 @@ const isCRCValid = (data) => {
   ((crc & 0xff) === data[data.length - 1]))
 }
 
+const analyzeBaseInfo = async (data, id, macAddr) => {
+  await updateBaseLastUpdate(id)
+  var dataInfo = data.toString().split('$')
+  var meanAcc = data[0] << 24 | data[1] << 16 | data[2] << 8 | data[3]
+  meanAcc /= 10000
+  await updateBaseMeanAcc(id, meanAcc)
+  if (meanAcc > 1) {
+    console.log(color.base, '[BASE ' + macAddrToString(macAddr) + '] SVIN meanAcc: ' + meanAcc + 'm')
+    logger.info('[BASE ' + macAddrToString(macAddr) + '] SVIN meanAcc: ' + meanAcc + 'm')
+  } else {
+    meanAcc *= 100
+    console.log(color.base, '[BASE ' + macAddrToString(macAddr) + '] SVIN meanAcc: ' + meanAcc + 'cm')
+    logger.info('[BASE ' + macAddrToString(macAddr) + '] SVIN meanAcc: ' + meanAcc + 'cm')
+  }
+  var ggaInfo = dataInfo[1].split(',')
+  if ((ggaInfo[2]) && (ggaInfo[4]) && ggaInfo[9]) {
+    await updateBasePosition(getLonLatInDec(ggaInfo[2]), getLonLatInDec(ggaInfo[4]), ggaInfo[9], id)
+  }
+  return { value: '!got' }
+}
+
 const analyzeAndSaveData = async (rest, data, id) => {
   await updateBaseLastUpdate(id)
   var rtcmReceived = 0
-  var invalidData = ''
   var restData = Buffer.from('')
-  var complete = [rest, data]
   var responseOk = false
-  data = Buffer.concat(complete)
-  if (data[0] === 0x21) {
-    var dataInfo = data.toString().split('$')
-    var svinInfo = dataInfo[0].split('!')
-    if (svinInfo[1] === 'svinacc') {
-      var meanAcc = data[9] << 24 | data[10] << 16 | data[11] << 8 | data[12]
-      meanAcc /= 10000
-      await updateBaseMeanAcc(id, meanAcc)
-      if (meanAcc > 1) {
-        console.log(color.base, '[BASE] SVIN meanAcc: ' + meanAcc + 'm')
-        logger.info('[BASE] SVIN meanAcc: ' + meanAcc + 'm')
-      } else {
-        meanAcc *= 100
-        console.log(color.base, '[BASE] SVIN meanAcc: ' + meanAcc + 'cm')
-        logger.info('[BASE] SVIN meanAcc: ' + meanAcc + 'cm')
-      }
-    }
-    var ggaInfo = dataInfo[1].split(',')
-    if ((ggaInfo[2]) && (ggaInfo[4])) {
-      await updateBasePosition(getLonLatInDec(ggaInfo[2]), getLonLatInDec(ggaInfo[4]), ggaInfo[9], id)
-    }
-    return { result: -1 }
-  }
-
+  data = Buffer.concat([rest, data])
   for (let i = 0; i < data.length; i++) {
     if (data[i] === 0xd3) {
-      if (printReceivedData) {
-        if (invalidData !== '') {
-          console.log(color.FgRed, Buffer.from(invalidData, 'hex'))
-          invalidData = ''
-        }
-      }
       if (i + 4 > data.length) {
         restData = data.slice(i, data.length)
       } else {
@@ -82,18 +88,6 @@ const analyzeAndSaveData = async (rest, data, id) => {
           }
           i += msg.length - 1
           rtcmReceived++
-          if (printReceivedData) {
-            for (var j = 0; j < msg.data.length; j++) {
-              if (msg.data[j] < 16) {
-                invalidData += '0' + msg.data[j].toString(16)
-              } else {
-                invalidData += msg.data[j].toString(16)
-              }
-              invalidData += ' '
-            }
-            console.log(color.FgBlue, invalidData + '\n')
-            invalidData = ''
-          }
           if (i > data.length - 1) {
             restData = msg.data
           } else {
@@ -101,7 +95,6 @@ const analyzeAndSaveData = async (rest, data, id) => {
               if (msg.type === 1230) {
                 responseOk = true
               }
-              // console.log('CRC: ' + isCRCValid(msg.data))
               if (isCRCValid(msg.data)) {
                 await updateFrameByType(msg.type, msg.data, id)
               } else {
@@ -110,12 +103,6 @@ const analyzeAndSaveData = async (rest, data, id) => {
             }
           }
         }
-      }
-    } else {
-      if (data[i] < 16) {
-        invalidData += '0' + data[i].toString(16)
-      } else {
-        invalidData += data[i].toString(16)
       }
     }
   }
@@ -127,3 +114,5 @@ const analyzeAndSaveData = async (rest, data, id) => {
 }
 
 exports.analyzeAndSaveData = analyzeAndSaveData
+exports.analyzeBaseInfo = analyzeBaseInfo
+exports.analyzeBaseData = analyzeBaseData

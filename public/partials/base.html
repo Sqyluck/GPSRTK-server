@@ -1,0 +1,107 @@
+<section>
+  <div class="base-view">
+    <div ng-show="!baseChosen">
+      <div ng-class="['cornerButton', 'bgGreen']" ng-click=actualize()>
+        Refresh <i class="fas fa-sync"></i>
+      </div>
+      <h3>Choisir une base</h3>
+      <table class="recTable">
+        <tr>
+          <th class="tdRec">Dernière modification</th>
+          <th class="tdRec"> Adresse MAC</th>
+          <th class="tdRec"> Statut </th>
+        </tr>
+        <tr class="trChoice" ng-repeat="base in allBases" ng-click="loadBase(base)">
+            <td class="tdRec">{{timeToString(base.lastUpdate)}}</td>
+            <td class="tdRec">{{base.macAddr}}</td>
+            <td class="tdRec" ng-class="base.connected ? 'green' : 'red'"> {{base.connected ? 'connectée' : 'non connectée'}} </td>
+        </tr>
+      </table>
+    </div>
+
+    <div ng-show="baseChosen">
+      <br/>
+      <div ng-class="['cornerButton', 'bgRed']" ng-click=backToList()>
+        Retour <i class="fas fa-chevron-right"></i>
+      </div>
+      <div ng-class="['cornerButton', 'bgGreen']" ng-click=actualize()>
+        Refresh <i class="fas fa-sync"></i>
+      </div>
+      <h3 style="margin-left: 30px;">Infomation de la base :</h3>
+      <div id="baseInfo">
+        <table>
+          <tr>
+            <td class="tdInfo">
+              Base :
+            </td><td class="tdInfo">
+              {{baseChosen.macAddr}}
+            </td>
+          </tr><tr>
+            <td class="tdInfo">
+              Status :
+            </td><td ng-class="[baseChosen.connected ? 'green' : 'red', 'tdInfo']">
+              {{baseChosen.connected ? 'Connectée' : 'non connectée'}}
+            </td>
+          </tr><tr>
+            <td class="tdInfo">
+              Dernière action :
+            </td><td class="tdInfo">
+              {{timeToString(baseChosen.lastUpdate)}}
+            </td>
+          </tr><tr>
+            <td class="tdInfo">
+              Altitude de la base mesurée:
+            </td><td class="tdInfo">
+              {{baseChosen.altitude}}m
+            </td>
+          </tr><tr>
+            <td class="tdInfo">
+              Altitude réélle de la base:
+            </td><td class="tdInfo">
+              {{baseChosen.trueAltitude ? baseChosen.trueAltitude : 0}}m
+            </td>
+          </tr><tr>
+            <td class="tdInfo">
+              Nouvelle altitude (m):
+            </td><td class="tdInfo">
+              <input type="number" step="0.001" ng-model="newAltitude"/>
+            </td>
+          </tr><tr>
+            <td class="tdInfo">
+              Dernière précision mesurée :
+            </td><td class="tdInfo">
+              {{(baseChosen.meanAcc) | number : 2}} m
+            </td>
+          </tr><tr>
+            <td class="tdInfo">
+              Précision exigée :
+            </td><td class="tdInfo">
+              {{(baseChosen.acc / 10000) | number : 2}} m
+            </td>
+          </tr><tr>
+            <td class="tdInfo">
+              Nouvelle précision (m):
+            </td><td class="tdInfo">
+              <input type="number" step="0.0001" ng-model="newAcc"/>
+            </td>
+          </tr><tr>
+            <td class="tdInfo">
+              Nombre de messages:
+            </td><td class="tdInfo">
+              {{baseChosen.rtcm.length}}
+            </td>
+          </tr><tr>
+            <td class="tdInfo">
+              Messages:
+            </td><td class="tdInfo">
+              <a ng-repeat="rtcm in baseChosen.rtcm">{{rtcm.type}}{{$last ? '' : ' / '}}</a>
+            </td>
+          </tr>
+        </table>
+        <a ng-class="(newAltitude != null || newAcc != null) ? 'selected' : 'unSelected'" ng-click="modifyBase()" value="newAltitude">Modifier</a>
+      </div>
+      <div id="baseMap">
+      </div>
+    </div>
+  </div>
+</section>
