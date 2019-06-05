@@ -11,9 +11,9 @@ angular.module('gpsrtk-app')
     $rootScope.choose(1)
 
     var timer = () => {
-      if ($scope.baseChosen) {
-        $scope.actualize()
-      }
+      // if ($scope.baseChosen) {
+      $scope.actualize()
+      // }
       setTimeout(timer, 5000)
     }
     setTimeout(timer, 5000)
@@ -33,6 +33,9 @@ angular.module('gpsrtk-app')
           url: $rootScope.ipAddress + '/allBases'
         }).then((data) => {
           $scope.allBases = data.data
+          $scope.allBases.forEach((base, index) => {
+            $scope.allBases[index].connected = ((base.lastUpdate > Date.now() - 120000) && base.connected)
+          })
           resolve()
         })
       })

@@ -6,8 +6,6 @@ const {
   ObjectId
 } = require('./database.js')
 
-const { deleteCorrectionsbyBaseId } = require('./correctionsDatabase.js')
-
 const color = require('./../color.js')
 
 const addBaseToDatabase = async (latitude, longitude, altitude, macAddr, acc) => {
@@ -22,7 +20,6 @@ const addBaseToDatabase = async (latitude, longitude, altitude, macAddr, acc) =>
         altitude,
         date: Date.now(),
         lastUpdate: Date.now(),
-        meanAcc: 0,
         acc
       } },
       { upsert: true })

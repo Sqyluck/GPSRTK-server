@@ -53,7 +53,7 @@ const analyzeData = async (client, data) => {
         }
       case 'SVINACC':
         data = data.slice(9)
-        const res = await analyzeBaseInfo(data, client.baseId)
+        const res = await analyzeBaseInfo(data, client.baseId, client.macAddr)
         return res
     }
   }
@@ -65,7 +65,7 @@ const analyzeData = async (client, data) => {
 
   // if connected as a rover
   } else if (client.status === 'ROVER') {
-    const res = await analyzeRoverRequest(data, client.baseId, client.roverId, client.nb_try, client.recordId)
+    const res = await analyzeRoverRequest(data, client.baseId, client.roverId, client.nb_try, client.recordId, client.macAddr)
     return res
 
   // if not connected
@@ -100,6 +100,7 @@ const checkConnectionFrame = async (frame) => {
     const altitude = Number(positionData[9])
     const result = {
       status: connectionData[1] === 'ROVER' ? 'ROVER' : 'BASE',
+      macAddr: macAddr,
       connected: (((connectionData[1].slice(0, 4) === 'BASE') || (connectionData[1] === 'ROVER')) && (Number(status) !== 0))
     }
     if (!result.connected) {

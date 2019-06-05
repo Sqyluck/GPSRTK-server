@@ -1,7 +1,10 @@
 const color = require('./../color.js')
 const config = require('./config')
 const { logger } = require('./../logger.js')
-const { getLonLatInDec } = require('./tools.js')
+const {
+  getLonLatInDec,
+  macAddrToString
+} = require('./tools.js')
 
 const { updateFrameByType } = require('./../database/correctionsDatabase.js')
 const {
@@ -44,19 +47,19 @@ const isCRCValid = (data) => {
   ((crc & 0xff) === data[data.length - 1]))
 }
 
-const analyzeBaseInfo = async (data, id) => {
+const analyzeBaseInfo = async (data, id, macAddr) => {
   await updateBaseLastUpdate(id)
   var dataInfo = data.toString().split('$')
   var meanAcc = data[0] << 24 | data[1] << 16 | data[2] << 8 | data[3]
   meanAcc /= 10000
   await updateBaseMeanAcc(id, meanAcc)
   if (meanAcc > 1) {
-    console.log(color.base, '[BASE] SVIN meanAcc: ' + meanAcc + 'm')
-    logger.info('[BASE] SVIN meanAcc: ' + meanAcc + 'm')
+    console.log(color.base, '[BASE ' + macAddrToString(macAddr) + '] SVIN meanAcc: ' + meanAcc + 'm')
+    logger.info('[BASE ' + macAddrToString(macAddr) + '] SVIN meanAcc: ' + meanAcc + 'm')
   } else {
     meanAcc *= 100
-    console.log(color.base, '[BASE] SVIN meanAcc: ' + meanAcc + 'cm')
-    logger.info('[BASE] SVIN meanAcc: ' + meanAcc + 'cm')
+    console.log(color.base, '[BASE ' + macAddrToString(macAddr) + '] SVIN meanAcc: ' + meanAcc + 'cm')
+    logger.info('[BASE ' + macAddrToString(macAddr) + '] SVIN meanAcc: ' + meanAcc + 'cm')
   }
   var ggaInfo = dataInfo[1].split(',')
   if ((ggaInfo[2]) && (ggaInfo[4]) && ggaInfo[9]) {

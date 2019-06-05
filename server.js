@@ -9,7 +9,8 @@ const {
 const {
   logDatetime,
   prepareFrame,
-  prepareRTCMArray
+  prepareRTCMArray,
+  macAddrToString
 } = require('./analyzer/tools.js')
 
 const server = net.createServer({ allowHalfOpen: false })
@@ -83,13 +84,13 @@ server.on('connection', async (socket) => {
           addSocket(client.roverId.toString(), socket)
           client.nb_try = 0
           client.recordId = null
-          console.log(color.rover, '[' + client.status + '] : [' + logDatetime() + '] : Connected from : ' + remoteAddress)
-          logger.info(' ' + logDatetime() + ' [' + client.status + '] : [' + logDatetime() + '] : Connected from : ' + remoteAddress)
+          console.log(color.rover, '[' + client.status + ' ' + macAddrToString(client.macAddr) + '] Connected from : ' + remoteAddress)
+          logger.info(' ' + logDatetime() + ' [' + client.status + ' ' + macAddrToString(client.macAddr) + '] Connected from : ' + remoteAddress)
         } else {
           addSocket(client.baseId.toString(), socket)
           client.rest = Buffer.from('')
-          console.log(color.base, '[' + client.status + '] : [' + logDatetime() + '] : Connected')
-          logger.info(' ' + logDatetime() + ' [' + client.status + '] : [' + logDatetime() + '] : Connected from : ' + remoteAddress)
+          console.log(color.base, '[' + client.status + ' ' + macAddrToString(client.macAddr) + '] Connected from : ' + remoteAddress)
+          logger.info(' ' + logDatetime() + ' [' + client.status + ' ' + macAddrToString(client.macAddr) + '] Connected from : ' + remoteAddress)
         }
       } else if ((result.value === '!fix') || (result.value === '!nfix')) {
         setTimeout(() => {
@@ -108,11 +109,11 @@ server.on('connection', async (socket) => {
         if (result.rest) {
           client.rest = result.rest
           if (counter % 100 === 0) {
-            logger.info(' ' + logDatetime() + ' [' + client.status + '] : RTCM Received from base [' + data.length + ']')
+            logger.info(' ' + logDatetime() + ' [' + client.status + ' ' + macAddrToString(client.macAddr) + ']: RTCM Received from base [' + data.length + ']')
           }
           counter++
           msgSize += data.length
-          console.log(color.base, ' ' + logDatetime() + ' [' + client.status + '] : RTCM Received from base [' + msgSize + ']') // : [' + logDatetime() + ']
+          console.log(color.base, '[' + client.status + ' ' + macAddrToString(client.macAddr) + ']: RTCM Received from base [' + msgSize + ']') // : [' + logDatetime() + ']
           msgSize = 0
         }
       } else if (result.value === '') {

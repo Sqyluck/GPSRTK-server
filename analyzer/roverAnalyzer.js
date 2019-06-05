@@ -4,7 +4,9 @@ const { getFramesFromDatabase } = require('./../database/correctionsDatabase.js'
 const { getRelativeAltitudeByBaseId } = require('./../database/baseDatabase.js')
 const {
   getLonLatInDec,
-  getStringStatus
+  getStringStatus,
+  logDatetime,
+  macAddrToString
 } = require('./tools.js')
 
 const color = require('./../color.js')
@@ -30,9 +32,9 @@ const getPositionAndStatus = async (data) => {
   }
 }
 
-const analyzeRoverRequest = async (data, baseId, roverId, nbTry, recordId) => {
+const analyzeRoverRequest = async (data, baseId, roverId, nbTry, recordId, macAddr) => {
   const result = await getPositionAndStatus(data)
-  console.log(color.rover, '[ROVER] Status: ' + result.status)
+  console.log(color.rover, '[ROVER ' + macAddrToString(macAddr) + '] Status: ' + result.status)
   let threshold = 10
   if (result.result) {
     let altitude = await getRelativeAltitudeByBaseId(result.altitude, baseId)
@@ -44,15 +46,15 @@ const analyzeRoverRequest = async (data, baseId, roverId, nbTry, recordId) => {
         if (recordId) {
           await addPostionToRecord(latitude, longitude, altitude, recordId)
         }
-        console.log(color.rover, '[ROVER]: Fix point found: ' + '{' + result.status + '}')
-        logger.info('[ROVER]: Fix point found: ' + '{' + result.status + '}')
+        console.log(color.rover, '[ROVER ' + macAddrToString(macAddr) + '] Fix point found: ' + '{' + result.status + '}')
+        logger.info(logDatetime() + ' [ROVER ' + macAddrToString(macAddr) + '] Fix point found: ' + '{' + result.status + '}')
         return {
           value: '!fix',
           nb_try: threshold + 1
         }
       } else {
-        console.log(color.rover, '[ROVER]: Can\'t find fix point {' + result.status + '}')
-        logger.info('[ROVER]: Can\'t find fix point {' + result.status + '}')
+        console.log(color.rover, '[ROVER ' + macAddrToString(macAddr) + ']: Can\'t find fix point {' + result.status + '}')
+        logger.info(logDatetime() + ' [ROVER ' + macAddrToString(macAddr) + '] Can\'t find fix point {' + result.status + '}')
         return {
           value: '!nfix',
           nb_try: threshold + 1

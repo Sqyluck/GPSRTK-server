@@ -27,6 +27,10 @@ const {
 } = require('./database/recordDatabase.js')
 
 const {
+  getFramesFromDatabase
+} = require('./database/correctionsDatabase.js')
+
+const {
   asyncForEach
 } = require('./database/database.js')
 
@@ -67,9 +71,10 @@ app.get('/', async (req, res) => {
 
 app.get('/allBases', async (req, res) => {
   var bases = await getallBasesFromDatabase()
-  bases.forEach((base, i) => {
+  await asyncForEach(bases, async (base, i) => {
     bases[i].macAddr = macAddrToString(base.macAddr)
     bases[i].connected = sockets.has(base._id.toString())
+    bases[i].rtcm = await getFramesFromDatabase(base._id.toString())
   })
   res.json(bases)
 })
