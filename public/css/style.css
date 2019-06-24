@@ -33,7 +33,7 @@
   background-color: grey;
 }
 
-#map{ /* la carte DOIT avoir une hauteur sinon elle n'apparaît pas */
+#recordMap{ /* la carte DOIT avoir une hauteur sinon elle n'apparaît pas */
   height:75vh;
   width: 95%;
   margin: 5px;
@@ -55,7 +55,7 @@
 
 #roverMap {
   height: 80%;
-  width: 90%;
+  width: 98%;
   margin: 5px;
 }
 
@@ -76,6 +76,14 @@
 
 .bgRed {
   background-color: red;
+}
+
+.bgGreenOpacity {
+  background-color: rgba(0, 255, 0, 0.5);
+}
+
+.bgRedOpacity {
+  background-color: rgba(255, 0, 0, 0.5);
 }
 
 .listRecord {
@@ -200,8 +208,28 @@
   color: green;
 }
 
+.lime {
+  color: lime;
+}
+
 .red {
   color: red;
+}
+
+.grey {
+  color: grey;
+}
+
+.yellow {
+  color: yellow;
+}
+
+.orange {
+  color: orange;
+}
+
+.cyan {
+  color: cyan;
 }
 
 .base-view {
@@ -235,4 +263,32 @@
 
 .lastChoice {
   border-radius: 0px 7px 7px 0px;
+}
+
+.satellite {
+  font-size: 12px;
+  margin: 10px 0px;
+  border-collapse: collapse;
+  border: 1px solid black;
+}
+
+.satellite td, th {
+  text-align: center;
+  border: 1px solid black;
+  width: 80px;
+  height: 13px;
+}
+
+.satellite tr:hover{
+  background-color: lightgrey;
+}
+
+.satellite thead {
+  display: block;
+}
+
+.satellite tbody {
+  height: 400px;
+  display: block;
+  overflow: auto;
 }

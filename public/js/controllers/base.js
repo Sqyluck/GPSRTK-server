@@ -2,21 +2,18 @@
 Base Controller
  */
 
+var baseMap = null
+
 angular.module('gpsrtk-app')
   .controller('baseCtrl', ['$scope', '$http', '$rootScope', function ($scope, $http, $rootScope) {
     $scope.allBases = []
-    $scope.baseMap = null
     $scope.baseMarker = null
     $scope.baseChosen = null
     $rootScope.choose(1)
 
-    var timer = () => {
-      // if ($scope.baseChosen) {
+    var timer = setInterval(() => {
       $scope.actualize()
-      // }
-      setTimeout(timer, 5000)
-    }
-    setTimeout(timer, 5000)
+    }, 5000)
 
     $scope.timeToString = (time) => {
       let date = new Date(time)
@@ -46,7 +43,7 @@ angular.module('gpsrtk-app')
     $scope.loadBase = (base) => {
       $scope.baseChosen = base
       $scope.baseChosen.trueAltitude = $scope.baseChosen.trueAltitude ? Number($scope.baseChosen.trueAltitude) : 0
-      initMap($scope.baseChosen.latitude, $scope.baseChosen.longitude)
+      initBaseMap($scope.baseChosen.latitude, $scope.baseChosen.longitude)
       setMarker($scope.baseChosen.latitude, $scope.baseChosen.longitude)
     }
 
@@ -92,11 +89,10 @@ angular.module('gpsrtk-app')
       })
     }
 
-    var initMap = (lat, lng) => {
-      console.log('initMap')
-      $scope.baseMap = new google.maps.Map(document.getElementById('baseMap'), {
+    var initBaseMap = (lat, lng) => {
+      baseMap = new google.maps.Map(document.getElementById('baseMap'), {
         center: new google.maps.LatLng(lat, lng),
-        zoom: 17,
+        zoom: 20,
         maxZoom: 30,
         mapTypeId: 'satellite',
         tilt: 0,
@@ -104,23 +100,48 @@ angular.module('gpsrtk-app')
         draggableCursor: 'crosshair',
         gestureHandling: 'greedy'
       })
+      /*
+      return new Promise((resolve, reject) => {
+        setTimeout(() => {
+          baseMap = L.map('baseMap').setView([lat, lng], 18)
+          L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
+            minZoom: 1,
+            maxZoom: 20
+          }).addTo(baseMap)
+          setTimeout(() => {
+            resolve()
+          }, 1000)
+        }, 1000)
+      }) */
     }
 
     var setMarker = (lat, lng) => {
       if ($scope.baseMarker) {
         $scope.baseMarker.setMap(null)
+        // baseMap.removeLayer($scope.baseMarker)
       }
       $scope.baseMarker = new google.maps.Marker({
         position: { lat: lat, lng: lng },
-        map: $scope.baseMap,
-        icon: baseIcon,
-        clickable: true
+        map: baseMap,
+        icon: baseIcon
       })
+      // $scope.baseMarker = L.marker([lat, lng], { icon: baseIcon }).addTo(baseMap)
     }
+
+    $scope.$on('$destroy', () => {
+      clearInterval(timer)
+    })
   }])
 
 var baseIcon = {
   url: 'base.png',
-  anchor: new google.maps.Point(18 / 2, 18 / 2),
-  scaledSize: new google.maps.Size(18, 18)
+  anchor: new google.maps.Point(5, 5),
+  scaledSize: new google.maps.Size(10, 10)
 }
+
+
+/* var baseIcon = L.icon({
+  iconUrl: 'base.png',
+  icon10: [10, 10],
+  iconAnchor: [5, 5]
+}) */

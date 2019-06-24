@@ -36,7 +36,7 @@
       Refresh <i class="fas fa-sync"></i>
     </div>
     <a ng-class="[showMap ? 'valid' : 'invalid', 'showMap']" ng-click="showRecordOnMap(true)">MAP</a><a ng-class="[!showMap ? 'valid' : 'invalid', 'showRec']" ng-click="showRecordOnMap(false)">RECORD</a>
-    <div ng-show="showMap" id="map">
+    <div ng-show="showMap" id="recordMap">
     </div>
     <div ng-show="!showMap">
       <table>
@@ -51,6 +51,14 @@
             Base de référence:
           </td><td class="tdInfo">
             {{recordChosen.macAddr}}
+          </td>
+        </tr><tr>
+          <td class="tdInfo">
+            Distance de la base:
+          </td><td ng-show="recordChosen.distance >= 1" class="tdInfo">
+            {{recordChosen.distance | number:3}}km
+          </td><td ng-show="recordChosen.distance < 1" class="tdInfo">
+            {{(recordChosen.distance * 1000) | number:2}}m
           </td>
         </tr><tr>
           <td class="tdInfo">
@@ -91,7 +99,7 @@
             Altitude calculée (m)
           </th>
         </tr>
-        <tr ng-repeat="position in recordChosen.data">
+        <tr ng-repeat="position in recordChosen.data" ng-class="position.status ? 'bgGreenOpacity' : 'bgRedOpacity' ">
           <td class="tdRec">
             {{position.lat | number:7}}
           </td><td class="tdRec">
@@ -110,6 +118,7 @@
         </tr>
       </table>
       <a class="download" ng-click="downloadRecord('csv')">DOWNLOAD CSV<a/>
+      <a class="quit" ng-click="deleteRecord()">Delete record<a/>
       <br/>
     </div>
   </div>

@@ -69,14 +69,20 @@
           </tr><tr>
             <td class="tdInfo">
               Dernière précision mesurée :
-            </td><td class="tdInfo">
+            </td><td ng-show="baseChosen.meanAcc >= 1" class="tdInfo">
               {{(baseChosen.meanAcc) | number : 2}} m
+            </td>
+            <td ng-show="baseChosen.meanAcc < 1" class="tdInfo">
+              {{(baseChosen.meanAcc * 100) | number : 2}} cm
             </td>
           </tr><tr>
             <td class="tdInfo">
               Précision exigée :
-            </td><td class="tdInfo">
+            </td><td ng-show="baseChosen.acc / 10000 >= 1" class="tdInfo">
               {{(baseChosen.acc / 10000) | number : 2}} m
+            </td>
+            <td ng-show="baseChosen.acc / 10000 < 1" class="tdInfo">
+              {{(baseChosen.acc / 10000 * 100) | number : 2}} cm
             </td>
           </tr><tr>
             <td class="tdInfo">

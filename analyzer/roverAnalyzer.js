@@ -35,17 +35,17 @@ const getPositionAndStatus = async (data) => {
 const analyzeRoverRequest = async (data, baseId, roverId, nbTry, recordId, macAddr) => {
   const result = await getPositionAndStatus(data)
   console.log(color.rover, '[ROVER ' + macAddrToString(macAddr) + '] Status: ' + result.status)
-  let threshold = 10
+  let threshold = 20
   if (result.result) {
     let altitude = await getRelativeAltitudeByBaseId(result.altitude, baseId)
     let latitude = getLonLatInDec(result.latitude)
     let longitude = getLonLatInDec(result.longitude)
     if ((nbTry === threshold) || (result.status === 'Fixed RTK')) {
       await updateRoverPositionById(latitude, longitude, altitude, result.status, roverId, true)
+      if (recordId) {
+        await addPostionToRecord(latitude, longitude, altitude, recordId, (result.status === 'Fixed RTK'))
+      }
       if (result.status === 'Fixed RTK') {
-        if (recordId) {
-          await addPostionToRecord(latitude, longitude, altitude, recordId)
-        }
         console.log(color.rover, '[ROVER ' + macAddrToString(macAddr) + '] Fix point found: ' + '{' + result.status + '}')
         logger.info(logDatetime() + ' [ROVER ' + macAddrToString(macAddr) + '] Fix point found: ' + '{' + result.status + '}')
         return {

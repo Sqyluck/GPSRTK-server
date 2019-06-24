@@ -11,7 +11,8 @@ const {
 
 const {
   addRoverToDatabase,
-  getRoverById
+  getRoverById,
+  updateSatellitesByRoverId
 } = require('./../database/roverDatabase.js')
 
 const { analyzeRoverRequest } = require('./roverAnalyzer.js')
@@ -23,7 +24,10 @@ const {
 
 const {
   getLonLatInDec,
-  getStringStatus
+  getStringStatus,
+  getFlagsStatus,
+  toSignedInt,
+  gnssIdToString
 } = require('./tools.js')
 
 const color = require('./../color.js')
@@ -55,6 +59,11 @@ const analyzeData = async (client, data) => {
         data = data.slice(9)
         const res = await analyzeBaseInfo(data, client.baseId, client.macAddr)
         return res
+      case 'SAT':
+        console.log(data.toString('hex'))
+        data = data.slice(5)
+        getSatellitesInformations(data, client.roverId)
+        return
     }
   }
 
@@ -82,6 +91,32 @@ const analyzeData = async (client, data) => {
       }
     }
   }
+}
+
+const getSatellitesInformations = (data, roverId) => {
+  data = data.slice(6)
+  const nSvs = data[5]
+  const satellites = []
+  console.log('Number of satellites: ' + nSvs)
+  for (let i = 0; i < nSvs; i++) {
+    let gnssId = data[8 + 12 * i]
+    let svId = data[9 + 12 * i]
+    let el = toSignedInt(data[11 + 12 * i])
+    let az = data[13 + 12 * i] << 8 | data[12 + 12 * i]
+    let flags = getFlagsStatus(data.slice(16 + 12 * i, 20 + 12 * i))
+    satellites.push({
+      Id: gnssIdToString(gnssId) + svId,
+      el,
+      az,
+      quality: flags.qualityInd,
+      svUsed: flags.svUsed,
+      health: flags.health,
+      GNSS: flags.diffCorr,
+      RTCM: flags.rtcm
+    })
+  }
+  updateSatellitesByRoverId(roverId, satellites)
+  console.table(satellites)
 }
 
 const checkConnectionFrame = async (frame) => {

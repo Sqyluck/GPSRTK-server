@@ -2,27 +2,22 @@
 Record Controller
  */
 
+var recordMap = null
+
 angular.module('gpsrtk-app')
   .controller('recordCtrl', ['$scope', '$http', '$rootScope', function ($scope, $http, $rootScope) {
     $scope.mapMarkers = []
     $scope.rovers = []
     $rootScope.choose(0)
-
-    if ($scope.recordChosen) {
-      console.log('keep this record')
-    } else {
-      $scope.recordChosen = null
-    }
+    $scope.recordChosen = null
     $scope.filterDate = 2
     $scope.showMap = false
     $scope.newAltitude = 0
     $scope.currentDate = Date.now()
 
-    const timer = () => {
+    const timer = setInterval(() => {
       $scope.currentDate = Date.now()
-      setTimeout(timer, 60000)
-    }
-    setTimeout(timer, 60000)
+    }, 60000)
 
     $scope.timeToString = (time) => {
       let date = new Date(time)
@@ -46,7 +41,6 @@ angular.module('gpsrtk-app')
       let hours = 3600000
       if ($scope.filterRover) {
         if (($scope.filterRover.length !== 0) && ($scope.filterRover !== record.roverId)) {
-          console.log('pas le bon rover false')
           return false
         }
       }
@@ -68,7 +62,6 @@ angular.module('gpsrtk-app')
           method: 'GET',
           url: $rootScope.ipAddress + '/allRovers'
         }).then((rovers) => {
-          console.log(rovers)
           $scope.allRovers = rovers.data
           resolve()
         })
@@ -80,13 +73,11 @@ angular.module('gpsrtk-app')
     $scope.allRecords = []
 
     $scope.getAllRecords = () => {
-      console.log('ok')
       return new Promise((resolve, reject) => {
         $http({
           method: 'GET',
           url: $rootScope.ipAddress + '/allRecords'
         }).then((records) => {
-          console.log(records.data)
           $scope.allRecords = records.data
           resolve()
         })
@@ -95,20 +86,29 @@ angular.module('gpsrtk-app')
     $scope.getAllRecords()
 
     $scope.loadRecord = (recordId) => {
-      console.log(recordId)
       if (recordId) {
-        console.log($scope.ipAddress + '/load/' + recordId)
         $http({
           method: 'GET',
-          url: $scope.ipAddress + '/load/' + recordId
+          url: $scope.ipAddress + '/allBases'
         }).then((data) => {
-          let record = data.data
-          console.log(record)
-          $scope.recordChosen = record
-          $scope.recordChosen.altitude = Number(record.altitude)
-          $scope.recordChosen.trueAltitude = (record.trueAltitude ? Number(record.trueAltitude) : 0)
-          $scope.newAltitude = (record.trueAltitude ? Number(record.trueAltitude) : 0)
-          $scope.showRecordOnMap($scope.showMap)
+          let bases = data.data
+          $http({
+            method: 'GET',
+            url: $scope.ipAddress + '/load/' + recordId
+          }).then((data) => {
+            let record = data.data
+            var res = bases.find((base) => {
+              return base._id === record.baseId
+            })
+            $scope.recordChosen = record
+            console.log(res.latitude + ', ' + res.longitude + ', ' + $scope.recordChosen.data[0].lat + ', ' + $scope.recordChosen.data[0].lng)
+            $scope.recordChosen.distance = distance(res.latitude, res.longitude, $scope.recordChosen.data[0].lat, $scope.recordChosen.data[0].lng)
+            console.log($scope.recordChosen.distance)
+            $scope.recordChosen.altitude = Number(record.altitude)
+            $scope.recordChosen.trueAltitude = (record.trueAltitude ? Number(record.trueAltitude) : 0)
+            $scope.newAltitude = (record.trueAltitude ? Number(record.trueAltitude) : 0)
+            $scope.showRecordOnMap($scope.showMap)
+          })
         })
       }
     }
@@ -122,7 +122,6 @@ angular.module('gpsrtk-app')
 
     $scope.saveAltitude = () => {
       if (typeof $scope.newAltitude === 'number') {
-        console.log($scope.newAltitude)
         $http({
           method: 'GET',
           url: $scope.ipAddress + '/setAltitude/' + $scope.recordChosen.baseId + '/' + $scope.newAltitude
@@ -140,15 +139,21 @@ angular.module('gpsrtk-app')
         $scope.showMap = show
       }
       if (show) {
-        initMap($scope.recordChosen.data[0].lat, $scope.recordChosen.data[0].lng)
+        initRecordMap($scope.recordChosen.data[0].lat, $scope.recordChosen.data[0].lng)
         $scope.recordChosen.data.forEach((record) => {
-          $scope.mapMarkers.push(new google.maps.Marker({
-            position: { lat: record.lat, lng: record.lng },
-            map: $rootScope.map,
-            icon: roverIconVert,
-            clickable: true,
-            title: $scope.timeToString(record.date) + ' : ' + (Math.round(record.alt * 1000) / 1000) + 'm => ' + (Math.round((record.alt + $scope.recordChosen.trueAltitude) * 1000) / 1000) + 'm'
-          }))
+          $scope.mapMarkers.push(addMarker(record.lat, record.lng, record.alt, record.status))
+        })
+      }
+    }
+
+    $scope.deleteRecord = () => {
+      if ($scope.recordChosen._id) {
+        $http({
+          method: 'GET',
+          url: $scope.ipAddress + '/deleteRecord/' + $scope.recordChosen._id
+        }).then((data) => {
+          $scope.backToList()
+          $scope.actualize()
         })
       }
     }
@@ -164,7 +169,6 @@ angular.module('gpsrtk-app')
       $scope.getAllRecords().then(() => {
         $scope.allRecords.forEach((record) => {
           if ($scope.recordChosen) {
-            console.log($scope.recordChosen)
             if (record._id === $scope.recordChosen._id) {
               $scope.loadRecord(record._id)
               // $scope.$apply()
@@ -177,29 +181,80 @@ angular.module('gpsrtk-app')
     var deleteMarkers = () => {
       while ($scope.mapMarkers.length !== 0) {
         $scope.mapMarkers[0].setMap(null)
+        // recordMap.removeLayer($scope.mapMarkers[0])
         $scope.mapMarkers.shift()
       }
     }
 
-    var initMap = (lat, lon) => {
-      console.log('initMap')
-      $rootScope.map = new google.maps.Map(document.getElementById('map'), {
-        center: new google.maps.LatLng(lat, lon),
-        zoom: 15,
-        maxZoom: 30,
-        mapTypeId: 'satellite',
-        tilt: 0,
-        heading: 360,
-        draggableCursor: 'crosshair',
-        gestureHandling: 'greedy'
-      })
+    var addMarker = (lat, lng, alt, status) => {
+      return (new google.maps.Marker({
+        position: { lat: lat, lng: lng },
+        map: recordMap,
+        icon: (status ? iconFixed : iconFloat),
+        title: alt + 'm => ' + (alt + $scope.newAltitude) + 'm'
+      }))
+      // return L.marker([lat, lng], { icon: icon }).addTo(recordMap)
     }
+
+    $scope.$on('$destroy', () => {
+      clearInterval(timer)
+    })
   }])
 
-const iSize = 10
+const size = 10
 
-var roverIconVert = {
-  url: 'pointVert.png',
-  anchor: new google.maps.Point(iSize / 2, iSize / 2),
-  scaledSize: new google.maps.Size(iSize, iSize)
+var initRecordMap = (lat, lng) => {
+  recordMap = new google.maps.Map(document.getElementById('recordMap'), {
+    center: new google.maps.LatLng(lat, lng),
+    zoom: 20,
+    maxZoom: 30,
+    mapTypeId: 'satellite',
+    tilt: 0,
+    heading: 360,
+    draggableCursor: 'crosshair',
+    gestureHandling: 'greedy'
+  })
+  /* return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      console.log('init1')
+      recordMap = L.map('recordMap').setView([lat, lng], 18)
+      L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
+        minZoom: 1,
+        maxZoom: 20
+      }).addTo(recordMap)
+      console.log('init2')
+      setTimeout(() => {
+        resolve()
+      }, 1000)
+    }, 1000)
+  }) */
 }
+
+const distance = (lat1, lon1, lat2, lon2) => {
+  var p = 0.017453292519943295 // Math.PI / 180
+  var c = Math.cos
+  var a = 0.5 - c((lat2 - lat1) * p) / 2 +
+          c(lat1 * p) * c(lat2 * p) *
+          (1 - c((lon2 - lon1) * p)) / 2
+  return 12742 * Math.asin(Math.sqrt(a))
+}
+
+var iconFixed = {
+  url: 'pointVert.png',
+  anchor: new google.maps.Point(size / 2, size / 2),
+  scaledSize: new google.maps.Size(size, size)
+}
+
+var iconFloat = {
+  url: 'pointRouge.png',
+  anchor: new google.maps.Point(size / 2, size / 2),
+  scaledSize: new google.maps.Size(size, size)
+}
+
+/*
+var iconFixed = L.icon({
+  iconUrl: 'pointVert.png',
+  iconSize: [size, size],
+  iconAnchor: [size / 2, size / 2]
+})
+*/

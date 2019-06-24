@@ -83,6 +83,7 @@ app.get('/allRovers', async (req, res) => {
   var rovers = await getallRoversFromDatabase()
   rovers.forEach((rover, index) => {
     rovers[index].macAddr = macAddrToString(rover.macAddr)
+    delete rovers[index].satellites
   })
   res.json(rovers)
 })

@@ -36,10 +36,10 @@ const createRecord = async (roverId, baseId) => {
   }
 }
 
-const addPostionToRecord = async (lat, lng, alt, recordId) => {
+const addPostionToRecord = async (lat, lng, alt, recordId, status) => {
   try {
     const db = await connectToDatabase()
-    let pos = { lat, lng, alt, date: Date.now() }
+    let pos = { lat, lng, alt, date: Date.now(), status }
     const result = await db.collection(config.collections.record).findOneAndUpdate(
       { _id: recordId },
       { $push: { data: pos } }
@@ -68,9 +68,11 @@ const createCsvFileByRecordId = async (recordId, mode) => {
     if (mode === 'csv') {
       str += '#Numero; Latitude; Longitude; X lambertI; Y lambertI; X lambert 93; Y lambert 93; altitude\n'
       await asyncForEach(result.data, (pos) => {
-        let lambertI = coordToLambert('Lambert1', pos.lat, pos.lng)
-        let lambert93 = coordToLambert('Lambert93', pos.lat, pos.lng)
-        str += (number++) + ';' + pos.lat + ';' + pos.lng + ';' + lambertI.X + ';' + lambertI.Y + ';' + lambert93.X + ';' + lambert93.Y + ';' + Math.round((pos.alt + altitude) * 1000) / 1000 + '\n'
+        if (pos.status) {
+          let lambertI = coordToLambert('Lambert1', pos.lat, pos.lng)
+          let lambert93 = coordToLambert('Lambert93', pos.lat, pos.lng)
+          str += (number++) + ';' + pos.lat + ';' + pos.lng + ';' + lambertI.X + ';' + lambertI.Y + ';' + lambert93.X + ';' + lambert93.Y + ';' + Math.round((pos.alt + altitude) * 1000) / 1000 + '\n'
+        }
       })
     } else if (mode === 'txt') {
       await asyncForEach(result.data, (pos) => {

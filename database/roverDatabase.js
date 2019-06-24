@@ -98,6 +98,18 @@ const getRoverById = async (roverId) => {
   }
 }
 
+const updateSatellitesByRoverId = async (roverId, satellites) => {
+  try {
+    const db = await connectToDatabase()
+    const result = await db.collection(config.collections.rover).findOneAndUpdate({
+      _id: ObjectId(roverId)
+    }, { $set: { satellites } })
+    return result
+  } catch (err) {
+    console.log(color.rover, 'updateSatellitesByRoverId: ' + err)
+  }
+}
+
 exports.addRoverToDatabase = addRoverToDatabase
 exports.updateRoverPositionById = updateRoverPositionById
 exports.deleteRoverById = deleteRoverById
@@ -105,3 +117,4 @@ exports.deleteAllRovers = deleteAllRovers
 exports.getallRoversFromDatabase = getallRoversFromDatabase
 exports.setRoverFixed = setRoverFixed
 exports.getRoverById = getRoverById
+exports.updateSatellitesByRoverId = updateSatellitesByRoverId

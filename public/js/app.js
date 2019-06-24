@@ -9,6 +9,7 @@ var app = angular.module('gpsrtk-app', [
 ])
 
 var routeAppControllers = angular.module('routeAppControllers', [])
+var googleMaps = false
 
 routeAppControllers
   .controller('mainCtrl', ['$scope', '$location', '$rootScope', ($scope, $location, $rootScope) => {

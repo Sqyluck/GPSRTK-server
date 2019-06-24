@@ -41,7 +41,7 @@ server.on('connection', async (socket) => {
 
   const remoteAddress = socket.remoteAddress.toString().split(':')[3] + ':' + socket.remotePort
   console.log('\x1b[33m', 'socket connected from ' + remoteAddress)
-  logger.info('[Connexion] Socket connected from ' + remoteAddress)
+  logger.info(logDatetime() + ' [Connexion] Socket connected from ' + remoteAddress)
 
   var sendPartialData = (array, index) => {
     if (index < array.length) {
@@ -85,12 +85,12 @@ server.on('connection', async (socket) => {
           client.nb_try = 0
           client.recordId = null
           console.log(color.rover, '[' + client.status + ' ' + macAddrToString(client.macAddr) + '] Connected from : ' + remoteAddress)
-          logger.info(' ' + logDatetime() + ' [' + client.status + ' ' + macAddrToString(client.macAddr) + '] Connected from : ' + remoteAddress)
+          logger.info(logDatetime() + ' [' + client.status + ' ' + macAddrToString(client.macAddr) + '] Connected from : ' + remoteAddress)
         } else {
           addSocket(client.baseId.toString(), socket)
           client.rest = Buffer.from('')
           console.log(color.base, '[' + client.status + ' ' + macAddrToString(client.macAddr) + '] Connected from : ' + remoteAddress)
-          logger.info(' ' + logDatetime() + ' [' + client.status + ' ' + macAddrToString(client.macAddr) + '] Connected from : ' + remoteAddress)
+          logger.info(logDatetime() + ' [' + client.status + ' ' + macAddrToString(client.macAddr) + '] Connected from : ' + remoteAddress)
         }
       } else if ((result.value === '!fix') || (result.value === '!nfix')) {
         setTimeout(() => {
@@ -109,7 +109,7 @@ server.on('connection', async (socket) => {
         if (result.rest) {
           client.rest = result.rest
           if (counter % 100 === 0) {
-            logger.info(' ' + logDatetime() + ' [' + client.status + ' ' + macAddrToString(client.macAddr) + ']: RTCM Received from base [' + data.length + ']')
+            logger.info(logDatetime() + ' [' + client.status + ' ' + macAddrToString(client.macAddr) + ']: RTCM Received from base [' + data.length + ']')
           }
           counter++
           msgSize += data.length
@@ -161,7 +161,7 @@ server.on('connection', async (socket) => {
       // deleteRoverById(client.roverId)
     }
     console.log(client.status === 'ROVER' ? color.rover : color.base, '--------- socket end -----------')
-    logger.info('--------- socket end -----------')
+    logger.info('----- ' + logDatetime() + ' --------- socket end -----------')
   })
 
   socket.on('close', () => {
@@ -171,7 +171,7 @@ server.on('connection', async (socket) => {
       delSocket(client.baseId)
     }
     console.log(client.status === 'ROVER' ? color.rover : color.base, '----- ' + logDatetime() + ' ----- Close connection from ' + remoteAddress)
-    logger.info('---------' + logDatetime() + ' Connection Closed from ' + remoteAddress + '-----------')
+    logger.info('----- ' + logDatetime() + ' Connection Closed from ' + remoteAddress + '-----------')
   })
 
   socket.on('error', (err) => {

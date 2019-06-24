@@ -17,9 +17,45 @@
     <div ng-class="['cornerButton', 'bgRed']" ng-click=backToList()>
       Retour <i class="fas fa-chevron-right"></i>
     </div>
-    <div ng-class="['cornerButton', 'bgRed']" ng-click=clearMap()>
+    <div ng-class="['cornerButton', 'bgRed']" ng-show="showMap" ng-click=clearMap()>
       Clear <i class="fas fa-chevron-right"></i>
     </div>
-    <div id="roverMap"></div>
+    <div ng-class="['cornerButton', 'bgGreen']" ng-show="!showMap" ng-click=showRoverMap(false)>
+      Refresh <i class="fas fa-sync"></i>
+    </div>
+    <a ng-class="[showMap ? 'valid' : 'invalid', 'showMap']" ng-click="showRoverMap(true)">MAP</a><a ng-class="[!showMap ? 'valid' : 'invalid', 'showRec']" ng-click="showRoverMap(false)">SATELITES</a>
+    <div ng-show="showMap" id="roverMap">
+    </div>
+    <div ng-show="!showMap">
+      <table>
+        <tr>
+          <td>Nombre de satellites :</td><td>{{roverChosen.satellites.length}}</td>
+        </tr><tr>
+          <td>Nombre de satellites valides :</td><td>{{satValid}}</td>
+        </tr><tr>
+          <td>Satellites corrigés :</td><td>{{satRTCM}}</td>
+        </tr>
+      </table>
+      <table class="satellite">
+        <tr>
+          <th>Id</th>
+          <th>Elevation</th>
+          <th>Azimut</th>
+          <th>Qualité</th>
+          <th>Utilisé</th>
+          <th>bonne santé</th>
+          <th>GNSS</th>
+          <th>RTCM</th>
+        </tr>
+        <tr ng-repeat="satellite in roverChosen.satellites">
+          <td>{{satellite.Id}}</td>
+          <td>{{satellite.el}}°</td>
+          <td>{{satellite.az}}°</td>
+          <td ng-class="getQuality(satellite.quality)">{{satellite.quality}}</td>
+          <td ng-class="satellite.svUsed === 1 ? 'lime' : ''">{{satellite.svUsed === 1 ? 'O' : '-'}}</td>
+          <td ng-class="satellite.health === 1 ? 'lime' : ''">{{satellite.health === 1 ? 'O' : '-'}}</td>
+          <td ng-class="satellite.GNSS === 1 ? 'lime' : ''">{{satellite.GNSS === 1 ? 'O' : '-'}}</td>
+          <td ng-class="satellite.RTCM === 1 ? 'lime' : ''">{{satellite.RTCM === 1 ? 'RTCM' : '-'}}</td>
+        </tr>
   </div>
 </section>

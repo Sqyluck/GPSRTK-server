@@ -95,6 +95,37 @@ const macAddrToString = (macAddr) => {
   return macAddrStr
 }
 
+const gnssIdToString = (gnssId) => {
+  switch (gnssId) {
+    case 0:
+      return 'G'
+    case 1:
+      return 'S'
+    case 2:
+      return 'E'
+    case 3:
+      return 'B'
+    case 5:
+      return 'Q'
+    case 6:
+      return 'R'
+  }
+}
+
+const toSignedInt = (byte) => {
+  return ((byte >> 7 & 0x01) ? -1 : 1) * (byte & 0x7f)
+}
+
+const getFlagsStatus = (flags) => {
+  return {
+    qualityInd: flags[0] & 0x07,
+    svUsed: (flags[0] >> 3) & 0x01,
+    health: (flags[0] >> 4) & 0x03,
+    diffCorr: (flags[0] >> 6) & 0x01,
+    rtcm: (flags[2] >> 1) & 0x01
+  }
+}
+
 exports.prepareRTCMArray = prepareRTCMArray
 exports.prepareFrame = prepareFrame
 exports.logDatetime = logDatetime
@@ -102,3 +133,6 @@ exports.getLonLatInDec = getLonLatInDec
 exports.getStringStatus = getStringStatus
 exports.coordToLambert = coordToLambert
 exports.macAddrToString = macAddrToString
+exports.gnssIdToString = gnssIdToString
+exports.toSignedInt = toSignedInt
+exports.getFlagsStatus = getFlagsStatus
