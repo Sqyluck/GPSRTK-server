@@ -1,4 +1,6 @@
 const config = require('./config.json')
+const fs = require('fs')
+const path = require('path')
 
 const {
   connectToDatabase,
@@ -6,9 +8,11 @@ const {
   ObjectId
 } = require('./database.js')
 
+const { coordToCCLambert } = require('../analyzer/tools.js')
+
 const color = require('./../color.js')
 
-const addBaseToDatabase = async (latitude, longitude, altitude, macAddr, acc) => {
+const addBaseToDatabase = async (latitude, longitude, altitude, height, macAddr, acc) => {
   try {
     const db = await connectToDatabase()
     const result = await db.collection(config.collections.base).findOneAndUpdate(
@@ -18,6 +22,7 @@ const addBaseToDatabase = async (latitude, longitude, altitude, macAddr, acc) =>
         latitude,
         longitude,
         altitude,
+        height,
         date: Date.now(),
         lastUpdate: Date.now(),
         acc
@@ -114,12 +119,12 @@ const updateBaseMeanAcc = async (id, meanAcc) => {
   }
 }
 
-const updateBasePosition = async (latitude, longitude, altitude, id) => {
+const updateBasePosition = async (latitude, longitude, altitude, height, id) => {
   try {
     const db = await connectToDatabase()
     const result = await db.collection(config.collections.base).findOneAndUpdate(
       { _id: ObjectId(id) },
-      { $set: { latitude, longitude, altitude } }
+      { $set: { latitude, longitude, altitude, height } }
     )
     // console.log(color.base, result)
   } catch (err) {
@@ -206,6 +211,24 @@ const getClosestBase = async (latitude, longitude) => {
   }
 }
 
+const createCSVFileByBaseId = async (baseId) => {
+  try {
+    var base = await getBaseById(ObjectId(baseId))
+    let stream = null
+    let str = ''
+    stream = fs.createWriteStream(path.join(__dirname, '/../public/base.csv'))
+    let lambertI = coordToCCLambert(base.latitude, base.longitude, 9)
+    str += 'Latitude; Longitude; X lambertCC50; Y lambertCC50;\n'
+    str += base.latitude + ';' + base.longitude + ';' + (lambertI.X) + ';' + (lambertI.Y) + ';\n'
+    console.log(str)
+    stream.write(str)
+    stream.end()
+    return true
+  } catch (err) {
+    console.lof('createCSVFileByBaseId: ' + err)
+  }
+}
+
 const distance = (lat1, lon1, lat2, lon2) => {
   var p = 0.017453292519943295 // Math.PI / 180
   var c = Math.cos
@@ -228,3 +251,4 @@ exports.setTrueAltitudeById = setTrueAltitudeById
 exports.getTrueAltitudeById = getTrueAltitudeById
 exports.getBaseMacAddress = getBaseMacAddress
 exports.setNewAccuracyOnBase = setNewAccuracyOnBase
+exports.createCSVFileByBaseId = createCSVFileByBaseId

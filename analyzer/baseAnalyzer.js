@@ -63,7 +63,7 @@ const analyzeBaseInfo = async (data, id, macAddr) => {
   }
   var ggaInfo = dataInfo[1].split(',')
   if ((ggaInfo[2]) && (ggaInfo[4]) && ggaInfo[9]) {
-    await updateBasePosition(getLonLatInDec(ggaInfo[2]), getLonLatInDec(ggaInfo[4]), ggaInfo[9], id)
+    await updateBasePosition(getLonLatInDec(ggaInfo[2]), getLonLatInDec(ggaInfo[4]), ggaInfo[9], ggaInfo[11], id)
   }
   return { value: '!got' }
 }

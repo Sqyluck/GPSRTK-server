@@ -84,6 +84,8 @@
       <table class="recTable">
         <tr>
           <th class="tdRec">
+            Date
+          </th><th class="tdRec">
             Latitude
           </th><th class="tdRec">
             Longitude
@@ -101,6 +103,8 @@
         </tr>
         <tr ng-repeat="position in recordChosen.data" ng-class="position.status ? 'bgGreenOpacity' : 'bgRedOpacity' ">
           <td class="tdRec">
+            {{timeToString(position.date)}}
+          </td><td class="tdRec">
             {{position.lat | number:7}}
           </td><td class="tdRec">
             {{position.lng | number:7}}

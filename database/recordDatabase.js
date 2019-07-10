@@ -12,7 +12,9 @@ const {
   getTrueAltitudeById
 } = require('./baseDatabase.js')
 
-const { coordToLambert } = require('./../analyzer/tools.js')
+const {
+  coordToLambert,
+  coordToCCLambert } = require('./../analyzer/tools.js')
 
 const addRecord = async (name, data) => {
   try {
@@ -66,12 +68,12 @@ const createCsvFileByRecordId = async (recordId, mode) => {
     let str = ''
     let number = 0
     if (mode === 'csv') {
-      str += '#Numero; Latitude; Longitude; X lambertI; Y lambertI; X lambert 93; Y lambert 93; altitude\n'
+      str += '#Numero; Latitude; Longitude; X lambertCC50; Y lambertCC50; X lambert 93; Y lambert 93; altitude\n'
       await asyncForEach(result.data, (pos) => {
         if (pos.status) {
-          let lambertI = coordToLambert('Lambert1', pos.lat, pos.lng)
+          let lambertI = coordToCCLambert(pos.lat, pos.lng, 9)
           let lambert93 = coordToLambert('Lambert93', pos.lat, pos.lng)
-          str += (number++) + ';' + pos.lat + ';' + pos.lng + ';' + lambertI.X + ';' + lambertI.Y + ';' + lambert93.X + ';' + lambert93.Y + ';' + Math.round((pos.alt + altitude) * 1000) / 1000 + '\n'
+          str += (number++) + ';' + pos.lat + ';' + pos.lng + ';' + (lambertI.X) + ';' + (lambertI.Y) + ';' + lambert93.X + ';' + lambert93.Y + ';' + Math.round((pos.alt + altitude) * 1000) / 1000 + '\n'
         }
       })
     } else if (mode === 'txt') {

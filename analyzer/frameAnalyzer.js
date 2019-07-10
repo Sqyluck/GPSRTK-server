@@ -133,6 +133,7 @@ const checkConnectionFrame = async (frame) => {
     const longitude = getLonLatInDec(positionData[4])
 
     const altitude = Number(positionData[9])
+    const height = Number(positionData[11])
     const result = {
       status: connectionData[1] === 'ROVER' ? 'ROVER' : 'BASE',
       macAddr: macAddr,
@@ -142,7 +143,7 @@ const checkConnectionFrame = async (frame) => {
       return result
     } else if (connectionData[1].slice(0, 4) === 'BASE') {
       const accuracy = Number(connectionData[1].slice(4))
-      result.baseId = await addBaseToDatabase(latitude, longitude, altitude, macAddr, accuracy)
+      result.baseId = await addBaseToDatabase(latitude, longitude, altitude, height, macAddr, accuracy)
       return result
     } else if (connectionData[1] === 'ROVER') {
       result.baseId = await getClosestBase(latitude, longitude)

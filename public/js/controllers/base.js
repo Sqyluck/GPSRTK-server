@@ -11,6 +11,13 @@ angular.module('gpsrtk-app')
     $scope.baseChosen = null
     $rootScope.choose(1)
 
+    var baseReel = { lat: 50.58945860, lng: 3.17600015 }
+    var baseReelMarker = null
+
+    var latOffset = 0 // -0.000007
+    var lngOffset = 0 // 0.000006
+    var click = null
+
     var timer = setInterval(() => {
       $scope.actualize()
     }, 5000)
@@ -43,36 +50,82 @@ angular.module('gpsrtk-app')
     $scope.loadBase = (base) => {
       $scope.baseChosen = base
       $scope.baseChosen.trueAltitude = $scope.baseChosen.trueAltitude ? Number($scope.baseChosen.trueAltitude) : 0
+      $scope.baseChosen.rtcmLength = 0
+      $scope.baseChosen.rtcm.forEach((rtcm) => {
+        // console.log(rtcm)
+        $scope.baseChosen.rtcmLength += (rtcm.data.length / 2)
+      })
       initBaseMap($scope.baseChosen.latitude, $scope.baseChosen.longitude)
       setMarker($scope.baseChosen.latitude, $scope.baseChosen.longitude)
+      baseReelMarker = new google.maps.Marker({
+        position: { lat: baseReel.lat, lng: baseReel.lng },
+        map: baseMap,
+        icon: {
+          url: 'pointBlanc.png',
+          anchor: new google.maps.Point(5, 5),
+          scaledSize: new google.maps.Size(10, 10)
+        },
+        zIndex: 1
+      })
     }
 
-    $scope.modifyBase = () => {
-      if (typeof $scope.newAcc === 'number') {
-        console.log('change acc')
-        if ($scope.baseChosen.connected) {
+    $scope.modifyBase = (mode) => {
+      if (mode === 'ALT') {
+        if (typeof $scope.newAltitude === 'number') {
           $http({
             method: 'GET',
-            url: $scope.ipAddress + '/changeAcc/' + $scope.baseChosen._id + '/' + (Math.round($scope.newAcc * 10000))
+            url: $scope.ipAddress + '/setAltitude/' + $scope.baseChosen._id + '/' + $scope.newAltitude
           })
-        } else {
-          window.alert('Impossible, cette base n\'est pas connectée')
+        }
+      } else if (mode === 'SVIN') {
+        if (typeof $scope.newAcc === 'number') {
+          if ($scope.baseChosen.connected) {
+            console.log($scope.ipAddress + '/changeAcc/' + $scope.baseChosen._id + '/' + (Math.round($scope.newAcc * 100)))
+            $http({
+              method: 'GET',
+              url: $scope.ipAddress + '/changeAcc/' + $scope.baseChosen._id + '/' + (Math.round($scope.newAcc * 100))
+            })
+          } else {
+            window.alert('Impossible, cette base n\'est pas connectée')
+          }
+        }
+      } else if (mode === 'FIXED') {
+        if ((typeof $scope.newlat === 'number') && (typeof $scope.newlng === 'number') && (typeof $scope.newhei === 'number')) {
+          if ($scope.baseChosen.connected) {
+            $http({
+              method: 'GET',
+              url: $scope.ipAddress + '/changeLLH/' + $scope.baseChosen._id + '/' + (Math.round($scope.newlat * 10000000)) + '/' + (Math.round($scope.newlng * 10000000)) + '/' + (Math.round($scope.newhei * 100))
+            })
+            $scope.newlat = null
+            $scope.newlng = null
+            $scope.newhei = null
+          } else {
+            window.alert('Impossible, cette base n\'est pas connectée')
+          }
         }
       }
-      if (typeof $scope.newAltitude === 'number') {
-        console.log('change altitude')
-        $http({
-          method: 'GET',
-          url: $scope.ipAddress + '/setAltitude/' + $scope.baseChosen._id + '/' + $scope.newAltitude
-        })
-      }
+
+
       $scope.actualize()
       $scope.newAcc = null
       $scope.newAltitude = null
     }
 
+    $scope.downloadBase = () => {
+      if ($scope.baseChosen) {
+        console.log($scope.baseChosen._id)
+        window.open($scope.ipAddress + '/downloadBase/' + $scope.baseChosen._id)
+      }
+    }
+
     $scope.backToList = () => {
       $scope.baseChosen = null
+    }
+
+    $scope.fillWithCurrentValue = () => {
+      $scope.newlat = Math.round($scope.baseChosen.latitude * 10000000) / 10000000
+      $scope.newlng = Math.round($scope.baseChosen.longitude * 10000000) / 10000000
+      $scope.newhei = Math.round((Number($scope.baseChosen.height) + Number($scope.baseChosen.altitude)) * 100) / 100
     }
 
     $scope.actualize = () => {
@@ -81,7 +134,12 @@ angular.module('gpsrtk-app')
           if ($scope.baseChosen) {
             if (base._id === $scope.baseChosen._id) {
               $scope.baseChosen = base
+              $scope.baseChosen.rtcmLength = 0
+              console.log((typeof $scope.baseChosen.height) + ' ' + (typeof $scope.baseChsoen.altitude))
               setMarker(base.latitude, base.longitude)
+              $scope.baseChosen.rtcm.forEach((rtcm) => {
+                $scope.baseChosen.rtcmLength += (rtcm.data.length / 2)
+              })
               $scope.$apply()
             }
           }
@@ -99,6 +157,26 @@ angular.module('gpsrtk-app')
         heading: 360,
         draggableCursor: 'crosshair',
         gestureHandling: 'greedy'
+      })
+      baseMap.addListener('click', (event) => {
+        if (click) {
+          click.setMap(null)
+        }
+        $scope.newlat = Math.round(event.latLng.lat() * 10000000) / 10000000
+        $scope.newlng = Math.round(event.latLng.lng() * 10000000) / 10000000
+        $scope.newhei = Math.round((Number($scope.baseChosen.height) + Number($scope.baseChosen.altitude)) * 100) / 100
+
+        click = new google.maps.Marker({
+          position: { lat: $scope.newlat, lng: $scope.newlng },
+          map: baseMap,
+          icon: {
+            url: 'pointBlanc.png',
+            anchor: new google.maps.Point(10, 10),
+            scaledSize: new google.maps.Size(20, 20)
+          },
+          zIndex: 1
+        })
+        $scope.$apply()
       })
       /*
       return new Promise((resolve, reject) => {
@@ -121,9 +199,10 @@ angular.module('gpsrtk-app')
         // baseMap.removeLayer($scope.baseMarker)
       }
       $scope.baseMarker = new google.maps.Marker({
-        position: { lat: lat, lng: lng },
+        position: { lat: lat + latOffset, lng: lng + lngOffset },
         map: baseMap,
-        icon: baseIcon
+        icon: baseIcon,
+        zIndex: 5
       })
       // $scope.baseMarker = L.marker([lat, lng], { icon: baseIcon }).addTo(baseMap)
     }
@@ -137,6 +216,12 @@ var baseIcon = {
   url: 'base.png',
   anchor: new google.maps.Point(5, 5),
   scaledSize: new google.maps.Size(10, 10)
+}
+
+var baseReel = {
+  url: 'pointBlanc.png',
+  anchor: new google.maps.Point(6, 6),
+  scaledSize: new google.maps.Size(12, 12)
 }
 
 

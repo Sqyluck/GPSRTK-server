@@ -14,6 +14,8 @@ angular.module('gpsrtk-app')
     $scope.showMap = false
     $scope.newAltitude = 0
     $scope.currentDate = Date.now()
+    var latOffset = 0 // -0.000007
+    var lngOffset = 0 // 0.000006
 
     const timer = setInterval(() => {
       $scope.currentDate = Date.now()
@@ -188,7 +190,7 @@ angular.module('gpsrtk-app')
 
     var addMarker = (lat, lng, alt, status) => {
       return (new google.maps.Marker({
-        position: { lat: lat, lng: lng },
+        position: { lat: lat + latOffset, lng: lng + lngOffset },
         map: recordMap,
         icon: (status ? iconFixed : iconFloat),
         title: alt + 'm => ' + (alt + $scope.newAltitude) + 'm'

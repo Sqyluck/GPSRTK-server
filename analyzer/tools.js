@@ -1,6 +1,6 @@
 const config = require('./config.json')
 
-const prepareFrame = (frame, type) => {
+const prepareFrame = (frame) => {
   let size = null
   let str = ''
   if (frame[0] === '!') {
@@ -75,6 +75,22 @@ lamb.set('Lambert3', { n: 0.6959127966, C: 11947992.52, Xs: 600000.000, Ys: 6791
 lamb.set('Lambert4', { n: 0.6712679322, C: 12136281.99, Xs: 234.358, Ys: 7239161.542, e: 0.08248325676, k0: 2.33722916667 })
 lamb.set('Lambert93', { n: 0.725607765053267, C: 11754255.426096, Xs: 700000.000, Ys: 12655612.049876, e: 0.0818191910428158, k0: 3 })
 
+const degreeToRadian = (degree) => {
+  return (degree * Math.PI / 180)
+}
+
+const latIsometric = (lat, e) => {
+  const res = ((1 / 2) * Math.log((1 + Math.sin(lat)) / (1 - Math.sin(lat))) - (e / 2) * Math.log((1 + e * Math.sin(lat)) / (1 - e * Math.sin(lat))))
+  // console.log(res)
+  return res
+}
+
+const AonSQRT = (lat, a, e) => {
+  const res = (a * Math.cos(lat)) / (Math.sqrt(1 - Math.pow(e, 2) * Math.pow(Math.sin(lat), 2)))
+  // console.log(res)
+  return res
+}
+
 const coordToLambert = (proj, lat, lng) => {
   lat = lat * Math.PI / 180
   lng = (lng - lamb.get(proj).k0) * Math.PI / 180
@@ -82,6 +98,30 @@ const coordToLambert = (proj, lat, lng) => {
   let x = ((lamb.get(proj).C * Math.exp(-lamb.get(proj).n * (latIso))) * Math.sin(lamb.get(proj).n * lng) + lamb.get(proj).Xs)
   let y = (lamb.get(proj).Ys - (lamb.get(proj).C * Math.exp(-lamb.get(proj).n * (latIso))) * Math.cos(lamb.get(proj).n * lng))
   return { X: x, Y: y }
+}
+
+const coordToCCLambert = (lat, lng, zone) => {
+  Math.round(zone)
+  if ((zone <= 9) && (zone >= 0)) {
+    lat = degreeToRadian(lat)
+    lng = degreeToRadian(lng)
+    let a = 6378137 // demi grand axe
+    let lat0 = 41 + zone
+    let lat1 = degreeToRadian(lat0 - 0.75)
+    let lat2 = degreeToRadian(lat0 + 0.75)
+    let lng0 = degreeToRadian(3)
+    lat0 = degreeToRadian(lat0)
+    let e = 0.08181919106
+    let E0 = 1700000
+    let N0 = (1000000 * zone) + 200000
+    let n = Math.log((a * Math.cos(lat2) / (Math.sqrt(1 - Math.pow(e, 2) * Math.pow(Math.sin(lat2), 2)))) / (a * Math.cos(lat1) / (Math.sqrt(1 - Math.pow(e, 2) * Math.pow(Math.sin(lat1), 2))))) / (latIsometric(lat1, e) - latIsometric(lat2, e))
+    let C = ((a * Math.cos(lat1) / (Math.sqrt(1 - Math.pow(e, 2) * Math.pow(Math.sin(lat1), 2)))) / n) * Math.exp(n * latIsometric(lat1, e))
+    let R = C * Math.exp(-n * latIsometric(lat, e))
+    let Ys = N0 + C * Math.exp(-n * latIsometric(lat0, e))
+    let y = n * (lng - lng0)
+    let result = { X: Math.round((E0 + R * Math.sin(y)) * 1000) / 1000, Y: Math.round((Ys - R * Math.cos(y)) * 1000) / 1000 }
+    return result
+  }
 }
 
 const macAddrToString = (macAddr) => {
@@ -132,6 +172,7 @@ exports.logDatetime = logDatetime
 exports.getLonLatInDec = getLonLatInDec
 exports.getStringStatus = getStringStatus
 exports.coordToLambert = coordToLambert
+exports.coordToCCLambert = coordToCCLambert
 exports.macAddrToString = macAddrToString
 exports.gnssIdToString = gnssIdToString
 exports.toSignedInt = toSignedInt

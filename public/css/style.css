@@ -162,7 +162,7 @@
 }
 
 .download {
-  display: block;
+  display: inline-block;
   text-align: center;
   width: 200px;
   color: white;

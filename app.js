@@ -15,7 +15,8 @@ const {
   setTrueAltitudeById,
   getBaseById,
   getBaseMacAddress,
-  setNewAccuracyOnBase
+  setNewAccuracyOnBase,
+  createCSVFileByBaseId
 } = require('./database/baseDatabase.js')
 
 const {
@@ -135,6 +136,15 @@ app.get('/download/:recordId/:mode', async (req, res) => {
   })
 })
 
+app.get('/downloadBase/:baseId', async (req, res) => {
+  await createCSVFileByBaseId(req.params.baseId) // , ('base' + req.params.baseId + '.csv')
+  res.download(path.join(__dirname, '/public/base.csv'), ('base' + req.params.baseId + '.csv'), (err) => {
+    if (err) {
+      console.log('download failed: ' + err)
+    }
+  })
+})
+
 app.get('/load/:recordId', async (req, res) => {
   const record = await getRecord(req.params.recordId)
   const base = await getBaseById(record.baseId)
@@ -161,16 +171,70 @@ app.get('/allSockets', async (req, res) => {
   res.json(currentSocket)
 })
 
-app.get('/changeAcc/:baseId/:newAcc', async (req, res) => {
+app.get('/changeAcc/:baseId/:newacc', async (req, res) => {
   const socket = sockets.get(req.params.baseId)
-  const msg = '!newAcc!' + req.params.newAcc
-  await setNewAccuracyOnBase(req.params.baseId, Number(req.params.newAcc))
-  socket.pause()
-  setTimeout(() => {
-    socket.write(prepareFrame(msg))
-    socket.resume()
-  }, 2000)
-  res.sendStatus(200)
+  if (socket) {
+    const acc = Buffer.from([
+      (req.params.newacc >> 24) & 0xFF,
+      (req.params.newacc >> 16) & 0xFF,
+      (req.params.newacc >> 8) & 0xFF,
+      req.params.newacc & 0xFF])
+    console.log(acc)
+    console.log(req.params.newacc)
+    const size = Buffer.from([0x00, 0x0a, 0x21])
+
+    const msg = Buffer.concat([size, Buffer.from('TMODE'), Buffer.from([0x01]), acc])
+    console.log(msg)
+    await setNewAccuracyOnBase(req.params.baseId, Number(req.params.newacc))
+    socket.pause()
+    setTimeout(() => {
+      socket.write(msg)
+      socket.resume()
+    }, 2000)
+    res.sendStatus(200)
+  } else {
+    console.log('no socket')
+  }
+})
+
+app.get('/changeLLH/:baseId/:newlat/:newlng/:newhei', async (req, res) => {
+  const socket = sockets.get(req.params.baseId)
+  if (socket) {
+    const lat = Buffer.from([
+      (req.params.newlat >> 24) & 0xFF,
+      (req.params.newlat >> 16) & 0xFF,
+      (req.params.newlat >> 8) & 0xFF,
+      req.params.newlat & 0xFF])
+    const lng = Buffer.from([
+      (req.params.newlng >> 24) & 0xFF,
+      (req.params.newlng >> 16) & 0xFF,
+      (req.params.newlng >> 8) & 0xFF,
+      req.params.newlng & 0xFF])
+    const hei = Buffer.from([
+      (req.params.newhei >> 24) & 0xFF,
+      (req.params.newhei >> 16) & 0xFF,
+      (req.params.newhei >> 8) & 0xFF,
+      req.params.newhei & 0xFF])
+
+    const size = Buffer.from([0x00, 0x12, 0x21])
+    console.log(size)
+    console.log(lat)
+    console.log(lng)
+    console.log(hei)
+
+    const msg = Buffer.concat([size, Buffer.from('TMODE'), Buffer.from([0x02]), lat, lng, hei])
+    console.log(msg)
+    // console.log(msg.toString(16))
+    // await setNewAccuracyOnBase(req.params.baseId, Number(req.params.newAcc))
+    socket.pause()
+    setTimeout(() => {
+      socket.write(msg)
+      socket.resume()
+    }, 2000)
+    res.sendStatus(200)
+  } else {
+    console.log('no socket')
+  }
 })
 
 app.listen(3000, () => {

@@ -50,6 +50,30 @@
             </td>
           </tr><tr>
             <td class="tdInfo">
+              Latitude :
+            </td><td class="tdInfo">
+              {{baseChosen.latitude | number : 7}}
+            </td>
+          </tr><tr>
+            <td class="tdInfo">
+              Longitude :
+            </td><td class="tdInfo">
+              {{baseChosen.longitude | number : 7}}
+            </td>
+          </tr><tr>
+            <td class="tdInfo">
+              Hauteur:
+            </td><td class="tdInfo">
+              {{((baseChosen.height | number : 3) + (baseChosen.altitude | number : 3))}}m
+            </td>
+          </tr><tr>
+            <td class="tdInfo">
+              Geoid sep (hauteur - altitude):
+            </td><td class="tdInfo">
+              {{baseChosen.height}}m
+            </td>
+          </tr><tr>
+            <td class="tdInfo">
               Altitude de la base mesurée:
             </td><td class="tdInfo">
               {{baseChosen.altitude}}m
@@ -65,6 +89,7 @@
               Nouvelle altitude (m):
             </td><td class="tdInfo">
               <input type="number" step="0.001" ng-model="newAltitude"/>
+              <a ng-class="(newAltitude != null) ? 'selected' : 'unSelected'" ng-click="modifyBase('ALT')" value="newAltitude">Modifier</a>
             </td>
           </tr><tr>
             <td class="tdInfo">
@@ -86,9 +111,28 @@
             </td>
           </tr><tr>
             <td class="tdInfo">
-              Nouvelle précision (m):
+              Nouvelle précision (cm):
             </td><td class="tdInfo">
-              <input type="number" step="0.0001" ng-model="newAcc"/>
+              <input type="number" step="0.01" ng-model="newAcc"/>
+              <a ng-class="(newAcc != null) ? 'selected' : 'unSelected'" ng-click="modifyBase('SVIN')" value="newAltitude">Modifier</a>
+            </td>
+          </tr><tr>
+            <td class="tdInfo">
+              Nouvelle position (LLH):
+            </td><td class="tdInfo">
+              <table>
+                <tr>
+                  <td></td><td><a ng-class="'selected'" ng-click="fillWithCurrentValue()">valeurs Actuelles</a></td>
+                </tr><tr>
+                  <td>Latitude </td><td><input type="number" step="0.0000001" ng-model="newlat"/></td>
+                </tr><tr>
+                  <td>Longitude </td><td><input type="number" step="0.0000001" ng-model="newlng"/></td>
+                </tr><tr>
+                  <td>Hauteur </td><td><input type="number" step="0.01" ng-model="newhei"/></td>
+                </tr><tr>
+                  <td></td><td><a ng-class="(newlat != null && newlng != null && newhei != null) ? 'selected' : 'unSelected'" ng-click="modifyBase('FIXED')">Modifier</a></td>
+                </tr>
+              </table>
             </td>
           </tr><tr>
             <td class="tdInfo">
@@ -102,12 +146,18 @@
             </td><td class="tdInfo">
               <a ng-repeat="rtcm in baseChosen.rtcm">{{rtcm.type}}{{$last ? '' : ' / '}}</a>
             </td>
+          </tr><tr>
+            <td class="tdInfo">
+              Taille des données:
+            </td><td class="tdInfo">
+              {{baseChosen.rtcmLength}} octets
+            </td>
           </tr>
         </table>
-        <a ng-class="(newAltitude != null || newAcc != null) ? 'selected' : 'unSelected'" ng-click="modifyBase()" value="newAltitude">Modifier</a>
       </div>
       <div id="baseMap">
       </div>
+      <!--<a class="downl oad" ng-click="downloadBase()">DOWNLOAD CSV<a/>-->
     </div>
   </div>
 </section>
