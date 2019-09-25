@@ -33,8 +33,33 @@ const {
 const color = require('./../color.js')
 
 const analyzeData = async (client, data) => {
+  // Rover messages
+  // !CONN!{mac}ROVER!{GNGGA} -> connexion avec message GNGGA pour les données de position
+  // !START!                   -> Debute l'enregistrement des données récoltées
+  // !END!                     -> Termine l'enregistrement
+  // {GNGGA}                   -> Donne la position et les données de précision,
+  //                             le rover attend des corrections RTCM en retour
+  //
+  // Base messages
+  // !CONN!{mac}BASE{meanAcc}!{GNGGA}   -> connexion avec message GNGGA pour les données de position
+  // !SVINACC!{meanAcc}{GNGGA} -> Donne la précision et la position actuelle de la base (SURVEY IN mode)
+  // {RTCM3[]}                 -> Donne les données de corrections en un ou plusieurs message (TIME mode)
+
+  // {gngga} : $GNGGA,hhmmss.ss,llll.lll,a,yyyyy.yyy,a,x,uu,v.v,w.w,M,x.x,M,,zzzz*hh<CR><LF>
+  // llll.llll : Latitude in ddmm.mmmm
+  // A N/S Indicator ‘N’ = North, ‘S’ = South
+  // yyyy.yyyy : longitude in ddmm.mmmm
+  // A E/W Indicator ‘E’ = East, ‘W’ = West
+  // x GPS quality indicator GPS quality indicator 0: position fix unavailable 1: valid position fix, SPS mode   2: valid position fix, differential GPS mode
+  // uu Satellites Used Number of satellites in use, (00 ~ 24)
+  // v.v HDOP Horizontal dilution of precision, (00.0 ~ 99.9)
+  // w.w Altitude Mean sea level altitude (-9999.9 ~ 17999.9) in meter
+  // x.x Geoidal Separation In meter
+  // zzzz DGPS Station ID Differential reference station ID, 0000 ~ 1023 NULL when DGPS n
+
+  // Analyse du header et le supprime du message
   if (data[0] === 0x21) {
-    let header = data.toString().split('!')[1]
+    const header = data.toString().split('!')[1]
     switch (header) {
       case 'CONN':
         client.status = null
@@ -42,7 +67,7 @@ const analyzeData = async (client, data) => {
         break
       case 'START':
         console.log(color.FgMagenta, '---------- start record -----------')
-        let recordId = await createRecord(client.roverId, client.baseId)
+        const recordId = await createRecord(client.roverId, client.baseId)
         return {
           recordId: recordId,
           value: '!start'
@@ -59,6 +84,8 @@ const analyzeData = async (client, data) => {
         data = data.slice(9)
         const res = await analyzeBaseInfo(data, client.baseId, client.macAddr)
         return res
+
+      // plus utilisé mais permet au rover de remonter les informations des satellites
       case 'SAT':
         console.log(data.toString('hex'))
         data = data.slice(5)
@@ -148,7 +175,7 @@ const checkConnectionFrame = async (frame) => {
     } else if (connectionData[1] === 'ROVER') {
       result.baseId = await getClosestBase(latitude, longitude)
       if (result.baseId) {
-        let relAltitude = await getRelativeAltitudeByBaseId(altitude, result.baseId)
+        const relAltitude = await getRelativeAltitudeByBaseId(altitude, result.baseId)
         result.roverId = await addRoverToDatabase(latitude, longitude, relAltitude, getStringStatus(status), macAddr)
       }
       return result

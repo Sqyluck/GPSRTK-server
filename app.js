@@ -217,13 +217,8 @@ app.get('/changeLLH/:baseId/:newlat/:newlng/:newhei', async (req, res) => {
       req.params.newhei & 0xFF])
 
     const size = Buffer.from([0x00, 0x12, 0x21])
-    console.log(size)
-    console.log(lat)
-    console.log(lng)
-    console.log(hei)
 
     const msg = Buffer.concat([size, Buffer.from('TMODE'), Buffer.from([0x02]), lat, lng, hei])
-    console.log(msg)
     // console.log(msg.toString(16))
     // await setNewAccuracyOnBase(req.params.baseId, Number(req.params.newAcc))
     socket.pause()
